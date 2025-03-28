@@ -1,4 +1,4 @@
-
+package tap.auth;
 import uws.job.user.DefaultJobOwner;
 import tap.TAPJob;
 import uws.job.UWSJob;
