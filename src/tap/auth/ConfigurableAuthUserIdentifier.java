@@ -1,5 +1,8 @@
 package tap.auth;
 import uws.service.UserIdentifier;
+import tap.communication.APIClient;
+import tap.communication.JSONAPIClient;
+import tap.metadata.TAPTable;
 import java.util.Properties;
 import uws.job.user.JobOwner;
 import uws.UWSException;
@@ -9,8 +12,9 @@ import java.util.Map;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
-import org.json.simple.JSONObject;
-
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.util.List;
 
 
 public class ConfigurableAuthUserIdentifier implements UserIdentifier {
@@ -23,7 +27,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
 	private APIClient api;
 
-	private String responseIDField; 
+	private String responseUserIDField; 
 
 	private String responsedPseudoField; 
 
@@ -35,11 +39,11 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		// TODO: How do we handle configs without defaults? Look around in vollt
 		this.sessionIDHeaderField = tapConfig.getProperty("sessionid_header_field","session-id");
 		this.authURL = tapConfig.getProperty("session_authentication_url");
-		this.userIDResponseField = tapConfig.getProperty("response_id_field");
-		this.usernameResponseField = tapConfig.getProperty("response_pseudo_field");
+		this.responseUserIDField = tapConfig.getProperty("response_id_field");
+		this.responsedPseudoField = tapConfig.getProperty("response_pseudo_field");
 		this.responseAllowedTablesField = tapConfig.getProperty("response_allowed_tables_field");
 		
-		this.api = JSONAPIClient(this.authURL);
+		this.api = new JSONAPIClient(this.authURL, "POST");
 	}
 
 	@Override
@@ -49,35 +53,33 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	String sessionToken = request.getHeader(this.sessionIDHeaderField);
         	if (sessionToken == null){
         		// throw exception appropriate: "Field "+sessionIDHeaderField +" not in request header"
-        		// Or should it just return the anonymous user?
         	} 
-
-        	if (this.supportsAnonymous && sessionToken.equals(this.ANONYMOUS_ID)){
-        		return anonymous;
-        	}
 
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
         	authHeaders.put(this.sessionIDHeaderField, sessionToken);
 
-        	jsonResponse = this.api.sendRequest(authHeaders);
+        	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
         } catch (UWSException e) {
-        	
+        	// TODO: properly handle this exception
         }
         HashMap<String, Object> permissions = new HashMap<>();
         // Add allowed tables
-        ArrayList<String> allowedTablesFromAPI = new ArrayList<String>();
-
-        for (JsonString elm: jsonResponse.getJsonArray(this.allowedTablesResponseField).getValuesAs(JsonString.class)){
-            allowedTablesFromAPI.add(elm.getString());
+        ArrayList<TAPTable> allowedTablesFromAPI = new ArrayList<TAPTable>();
+        
+        JSONArray tablesjson = jsonResponse.getJSONArray(this.responseAllowedTablesField);
+        // Loop over json array of tables. Extract Object and convert to string to build a new TAPTable
+        for (int i = 0; i<tablesjson.length(); i++){
+            allowedTablesFromAPI.add(new TAPTable(tablesjson.getString(i)));
         }
         permissions.put("allowedTables", allowedTablesFromAPI);
 
-        return restoreUser(jsonResponse.getString(this.userIDResponseField), jsonResponse.getString(usernameResponseField), permissions);
+        return restoreUser(jsonResponse.getString(this.responseUserIDField), 
+        	jsonResponse.getString(this.responsedPseudoField), permissions);
 	}
 
 	@Override
 	public JobOwner restoreUser(String id, String pseudo, Map<String, Object> otherData) {
-		return AuthJobOwner(id, pseudo, (List<String>) otherData.get("allowedTables"));
+		return new AuthJobOwner(id, pseudo, (List<TAPTable>) otherData.get("allowedTables"));
 	}
 	
 }

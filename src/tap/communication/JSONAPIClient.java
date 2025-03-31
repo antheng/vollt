@@ -1,5 +1,5 @@
 package tap.communication;
-import org.json.simple.JSONObject;
+import org.json.JSONObject;
 
 public class JSONAPIClient extends APIClient<JSONObject> {
 
@@ -12,8 +12,8 @@ public class JSONAPIClient extends APIClient<JSONObject> {
 	}
 
 	@Override
-	protected byte[] convertToBytes(JSONObject payload){
-		return JSONObject.toString().getBytes(Charset.forName(this.textEncoding));
+	protected String convertToString(JSONObject payload){
+		return payload.toString();
 	}
 
 	@Override

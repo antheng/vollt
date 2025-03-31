@@ -1,4 +1,4 @@
-
+package tap.communication;
 public class DefaultAPIClient extends APIClient<String> {
 
 	public DefaultAPIClient(String urlString, String requestMethod, String payloadEncoding){
