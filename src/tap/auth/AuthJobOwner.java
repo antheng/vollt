@@ -95,5 +95,17 @@ public class AuthJobOwner extends DefaultJobOwner {
 		return allowedTables;
 	}
 
+	public boolean canAccessTable(TAPTable table){
+		for(TAPTable userTable : allowedTables){
+			if (userTable.getFullName().equals(table.getFullName()){
+				return true;
+			}
+		}
+		// Table is not found
+		return false;
+
+		
+	}
+
 	
 }

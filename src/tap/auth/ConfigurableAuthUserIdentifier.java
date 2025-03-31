@@ -15,9 +15,17 @@ import java.util.ArrayList;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.List;
+import tap.TAPException;
 
 
 public class ConfigurableAuthUserIdentifier implements UserIdentifier {
+
+	public final static String KEY_SESSIONID_HEADER_FIELD = "sessionid_header_field";
+	public final static String KEY_AUTH_URL_FIELD = "session_authentication_url";
+	public final static String KEY_RESP_SESSIONID_FIELD = "response_id_field";
+	public final static String KEY_RESP_PSEUDO_FIELD = "response_pseudo_field";
+	public final static String KEY_RESP_ALLOWED_TABLES_FIELD = "response_pseudo_field";
+
 
 	/* URL to send authentication requests to verify cookie */
 	private String authURL; 
@@ -35,13 +43,18 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
 
 
-	public ConfigurableAuthUserIdentifier(final Properties tapConfig){
-		// TODO: How do we handle configs without defaults? Look around in vollt
-		this.sessionIDHeaderField = tapConfig.getProperty("sessionid_header_field","session-id");
-		this.authURL = tapConfig.getProperty("session_authentication_url");
-		this.responseUserIDField = tapConfig.getProperty("response_id_field");
-		this.responsedPseudoField = tapConfig.getProperty("response_pseudo_field");
-		this.responseAllowedTablesField = tapConfig.getProperty("response_allowed_tables_field");
+	public ConfigurableAuthUserIdentifier(final Properties tapConfig) throws TAPException{
+		this.sessionIDHeaderField = tapConfig.getProperty(KEY_SESSIONID_HEADER_FIELD); 
+		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
+		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
+		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
+		this.responseAllowedTablesField = tapConfig.getProperty(KEY_RESP_ALLOWED_TABLES_FIELD);
+		// if any of the required fields are missing, throw IllegalArgumentException
+		if (this.sessionIDHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
+			this.responsedPseudoField == null || this.responseAllowedTablesField == null){ 
+			throw new TAPException(" " + KEY_UDFS + ": " + (udfOffset + matcher.start(GROUP_SIGNATURE)) + "-" + (udfOffset + matcher.end(GROUP_SIGNATURE)) + ")");
+
+		}
 		
 		this.api = new JSONAPIClient(this.authURL, "POST");
 	}
@@ -59,8 +72,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	authHeaders.put(this.sessionIDHeaderField, sessionToken);
 
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
-        } catch (UWSException e) {
+        } catch (TAPException TAPe) {
         	// TODO: properly handle this exception
+        	TAPe.getHttpErrorCode();
         }
         HashMap<String, Object> permissions = new HashMap<>();
         // Add allowed tables
