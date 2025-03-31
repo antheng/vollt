@@ -32,6 +32,7 @@ import java.io.BufferedReader;
 import java.nio.charset.Charset;
 import java.io.DataOutputStream;
 import java.io.InputStream;
+import tap.TAPException;
 
 /**
  * <p>Provides an generic abstract class for acting as a client for an API. Inherit to handle different payload and response data formats</p>
@@ -208,7 +209,7 @@ public abstract class APIClient<T> {
             } else{
             	String errorMessage = readFromStream(conn.getErrorStream());
 	            // Throw an exception with the error details
-	            throw new HTTPRequestException(responseCode, "API Communication Error at "+this.url.toString()+": Response code " + responseCode + ": " + errorMessage.toString().trim());
+	            throw new TAPException("API Communication Error at "+this.url.toString()+": Response code " + responseCode + ": " + errorMessage.toString().trim(), responseCode);
             }
 	}
 

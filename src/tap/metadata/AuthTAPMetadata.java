@@ -112,7 +112,7 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 
 		int nbColumns = 0;
 		for(TAPTable t : s){
-			if (!user.getAllowedTables().contains(t.getFullName())){
+			if (!user.canAccessTable(t)){
 				continue; // Don't add this table if it's not in the user's list of allowed tables
 			}
 
