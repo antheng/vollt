@@ -27,6 +27,9 @@ package tap.communication;
  * @author Anthony Heng (AAO)
  * @version 04/2025
  */
+
+import tap.TAPException;
+
 public class DefaultAPIClient extends APIClient<String> {
 	/**
 	 * Create a APIClient for a given URL, and what kind of requests to send, 
@@ -34,8 +37,11 @@ public class DefaultAPIClient extends APIClient<String> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
+	 *
+	 * @throws TAPException If the URL is malformed
+	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public DefaultAPIClient(String urlString, String requestMethod, String payloadEncoding){
+	public DefaultAPIClient(String urlString, String requestMethod, String payloadEncoding) throws TAPException{
 		super(urlString, requestMethod, payloadEncoding);
 	}
 	/**
@@ -43,8 +49,11 @@ public class DefaultAPIClient extends APIClient<String> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
+	 *
+	 * @throws TAPException If the URL is malformed
+	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public DefaultAPIClient(String urlString, String requestMethod){
+	public DefaultAPIClient(String urlString, String requestMethod) throws TAPException{
 		super(urlString, requestMethod);
 	}
 

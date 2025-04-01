@@ -33,6 +33,8 @@ import java.io.BufferedReader;
 import java.nio.charset.Charset;
 import java.io.DataOutputStream;
 import java.io.InputStream;
+import java.net.URISyntaxException;
+
 import tap.TAPException;
 
 /**
@@ -96,8 +98,11 @@ public abstract class APIClient<T> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
+	 *
+	 * @throws TAPException If the URL is malformed
+	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public APIClient(String urlString, String requestMethod, String stringEncoding){
+	public APIClient(String urlString, String requestMethod, String stringEncoding) throws TAPException, IllegalArgumentException {
 		this(urlString, requestMethod);
 		this.stringEncoding = stringEncoding;
 	}
@@ -107,9 +112,20 @@ public abstract class APIClient<T> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
+	 *
+	 * @throws TAPException If the URL is malformed
+	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public APIClient(String urlString, String requestMethod){
-		this.url = new URI(urlString).toURL();
+	public APIClient(String urlString, String requestMethod) throws TAPException, IllegalArgumentException {
+		try{
+			this.url = new URI(urlString).toURL();
+		} catch (URISyntaxException e){
+        	// rethrow malformed URI exceptions as TAP exceptions
+        	throw new TAPException(e.getMessage());
+		} catch (MalformedURLException e){
+        	throw new TAPException(e.getMessage());
+        }
+
 		if (requestMethod.equals("POST") || requestMethod.equals("GET")){
 			this.requestMethod = requestMethod;
 		} else{
@@ -121,7 +137,7 @@ public abstract class APIClient<T> {
 	 * Send the request only with no data. Useful for GET requests. 
 	 * @return response as object T
 	 */
-	public T sendRequest(){
+	public T sendRequest() throws TAPException, IOException{
 		// Attach empty headers
 		Map<String, String> headers = Collections.<String, String>emptyMap();
 		return convertFromString(getStringResponse(headers, ""));
@@ -134,7 +150,7 @@ public abstract class APIClient<T> {
 	 * @param headers Header fields to send to the API URL
 	 * @return response as object T
 	 */
-	public T sendRequest(Map<String, String> headers){
+	public T sendRequest(Map<String, String> headers) throws TAPException, IOException{
 		return convertFromString(getStringResponse(headers, ""));
 
 	}
@@ -147,7 +163,7 @@ public abstract class APIClient<T> {
 	 * @param payload payload to send. Only for POST requests
 	 * @return response as an object of type T
 	 */
-	public T sendRequest(Map<String, String> headers, T payload){
+	public T sendRequest(Map<String, String> headers, T payload) throws TAPException, IOException{
 		String payloadAsString = convertToString(payload);
 		return convertFromString(getStringResponse(headers, payloadAsString));
 
@@ -159,10 +175,11 @@ public abstract class APIClient<T> {
 	 * @param  inputStream input stream to read data from
 	 * @return Data read from the input stream 
 	 */
-	private String readFromStream(InputStream inputStream){
+	private String readFromStream(InputStream inputStream) throws IOException{
 
 		StringBuilder sb = new StringBuilder();
 		InputStreamReader reader = new InputStreamReader(inputStream, Charset.forName(this.stringEncoding));
+
 		BufferedReader br = new BufferedReader(reader);
 
         String line;
@@ -170,7 +187,7 @@ public abstract class APIClient<T> {
             sb.append(line);
         }
         br.close();
-
+    
 		return sb.toString();
 
 	}
@@ -184,40 +201,47 @@ public abstract class APIClient<T> {
 	 * @throws IOException If the connection the API url fails. 
 	 * @throws TAPException If the HTTP response is a non-successful one (>=200 and <300)
 	 */
-	protected String getStringResponse(Map<String, String> headers, String payloadStr){
+	protected String getStringResponse(Map<String, String> headers, String payloadStr) throws TAPException, IOException{
 			HttpURLConnection conn;
-			try{
-				// Create URL object
-	        	conn = (HttpURLConnection) url.openConnection();
-	        
-		        // Set request method
-		        conn.setRequestMethod(this.requestMethod);
+			
+			// Create URL object
+        	conn = (HttpURLConnection) url.openConnection();
+        
+	        // Set request method
+	        conn.setRequestMethod(this.requestMethod);
 
 
-		        // Add all headers to the request
-		        for (Map.Entry<String, String> entry : headers.entrySet()) {
-	            	conn.setRequestProperty(entry.getKey(), entry.getValue());
-				}
-				conn.connect();
+	        // Add all headers to the request
+	        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            	conn.setRequestProperty(entry.getKey(), entry.getValue());
+			}
 
-			} catch (IOException e){
-	        	throw new IOException("Failed to connect to API at "+url.toString()+" : "+e.getMessage());
-	        }
+			conn.setConnectTimeout(5000); //set timeout to 5 seconds TODO: Set this in constructor
+
 
 	        if (this.requestMethod.equals("POST")){
 	        	conn.setDoOutput(true); // Enable writing output to the request
 	        	// Send payload
 				DataOutputStream apiOut = new DataOutputStream(conn.getOutputStream());
-				apiOut.writeChars(payloadStr);
-				apiOut.flush();
-				apiOut.close();
+				try{
+					apiOut.writeChars(payloadStr);
+					apiOut.flush();
+					apiOut.close();
+				} catch (IOException ioe){
+	        		throw new TAPException("Failed to send output data through connection to "+url.toString()+" : "+ioe.getMessage());
+				}
 	        } 
 
 			// RESPONSE
             InputStreamReader apiReader; 
             
 			// Read response
-	        int responseCode = conn.getResponseCode();
+	        int responseCode;
+	        try{
+	        	responseCode = conn.getResponseCode();
+	        } catch (IOException ioe){
+	        	throw new TAPException("API Communication Error at "+this.url.toString()+": No Response Code : "+ioe.getMessage());
+	        }
 
             if (responseCode >= 200 && responseCode < 300){ // If response is a success code
             	return readFromStream(conn.getInputStream());

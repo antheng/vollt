@@ -19,6 +19,8 @@ package tap.communication;
  * Copyright 2012 - UDS/Centre de Données astronomiques de Strasbourg (CDS)
  */
 import org.json.JSONObject;
+import tap.TAPException;
+
 /**
  *
  * <p> Subclass of {@link APIClient} to handle JSON strings in the request and response bodies by converting them to <code>org.json.JSONObject</code> objects</p>
@@ -33,8 +35,11 @@ public class JSONAPIClient extends APIClient<JSONObject> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
+	 *
+	 * @throws TAPException If the URL is malformed
+	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET" 
 	 */
-	public JSONAPIClient(String urlString, String requestMethod, String payloadEncoding){
+	public JSONAPIClient(String urlString, String requestMethod, String payloadEncoding) throws TAPException{
 		super(urlString, requestMethod, payloadEncoding);
 	}
 
@@ -43,8 +48,11 @@ public class JSONAPIClient extends APIClient<JSONObject> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
+	 *
+	 * @throws TAPException If the URL is malformed
+	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public JSONAPIClient(String urlString, String requestMethod){
+	public JSONAPIClient(String urlString, String requestMethod) throws TAPException{
 		super(urlString, requestMethod);
 	}
 

@@ -17,6 +17,7 @@ package tap.auth;
  * 
  * Copyright 2012 - UDS/Centre de Données astronomiques de Strasbourg (CDS)
  */
+
 import java.util.List;
 
 import adql.parser.ADQLParser;
@@ -98,23 +99,36 @@ public class AuthJobOwner extends DefaultJobOwner {
 	 * 
 	 */
 	@Override
-	public boolean hasExecutePermission(UWSJob job){
+	public boolean hasExecutePermission(UWSJob job) {
 		boolean nullCheck =  (job == null) || (job.getOwner() == null);
 		boolean isOwner = job.getOwner().equals(this);
 
 		if (job instanceof TAPJob){
-			return (nullCheck||isOwner) && checkTAPJobAllowed((TAPJob) job); 
+			try {
+				boolean tapJobAllowed = checkTAPJobAllowed((TAPJob) job);
+				return (nullCheck||isOwner) && tapJobAllowed; 
+			} catch (ParseException e){
+				// Cannot run this job due to malformed query, return false
+				// TODO: I would like a way to report the reason why it failed and return false...
+				// return false;
+				return true; // Let it run. It'll get caught further down the line during execution and produce an informative exception
+							 // Can't do it here as JobOwner.hasExecutePermission() does not normally throw checked exceptions
+			}
 		} else{
 			return (nullCheck||isOwner);  
 		}
 	}
 
+<<<<<<< HEAD
 	/**
 	 * Checks if a given TAPJob is allowed to be run by the owner
 	 * @param  job TAPJob to check against
 	 * @return     <code>true</code> if the this JobOwner meets all requirements for running the job <code>false</code> otherwise.
 	 */
 	private boolean checkTAPJobAllowed(TAPJob job){
+=======
+	private boolean checkTAPJobAllowed(TAPJob job) throws ParseException {
+>>>>>>> b3b213b (Fixing up exception handling)
 		TAPParameters tapParams = job.getTapParams();
 		// If TAPJob is allowed
 		if (tapParams.getRequest().equals(TAPJob.REQUEST_DO_QUERY)){
@@ -131,12 +145,8 @@ public class AuthJobOwner extends DefaultJobOwner {
 	        	// If a parse runs into this exception, then it is not on the list of allowed tables. Return false
 	        	return false;
 
-	        } catch(ParseException pe){
-	        	// If a parse runs into this exception, then thequery is malformed. Rethrow.
-	        	throw pe;
-
-	        }  
-	        // parsed without any issues, continue on to return true
+	        }
+	        // parsed without any issues from the DBChecker, continue on to return true
 	    }
 	    return true;
 	}

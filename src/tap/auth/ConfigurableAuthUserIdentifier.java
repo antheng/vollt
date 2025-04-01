@@ -83,7 +83,8 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* URL to send authentication requests to verify cookie. Changed in tap.properties under sessionid_header_field */
 	private String authURL; 
 
-	/* Field in the request header that contains the session ID, sent to authURL for verification. Changed in tap.properties under session_authentication_url*/
+	/* Field in the request header that contains the session ID, sent to authURL for verification. Changed in tap.properties under 
+	 * session_authentication_url*/
 	private String sessionIDHeaderField;
 
 	/* APIClient used for communication with the authentication API which we will send authentication tokens to*/
@@ -95,21 +96,25 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* From the API response the field name of the username. Can be changed in tap.properties under response_pseudo_field */
 	private String responsedPseudoField; 
 
-	/* From the API response the field name of the list of allowed tables the user can access. Can be changed in tap.properties under response_tables_field */
+	/* From the API response the field name of the list of allowed tables the user can access. Can be changed in tap.properties 
+	 * under response_tables_field */
 	private String responseAllowedTablesField;
 
 
 	/**
-	 * <p>Builds the authenticated API thanks to a given TAP configuration file. The configuration file is used to configure the expected headers for sessions and the authentication API</p>
+	 * <p>Builds the authenticated API thanks to a given TAP configuration file. The configuration file is used to configure the 
+	 * expected headers for sessions and the authentication API</p>
 	 * 
-	 * <p>This method should either be called during the custom servlet initialisation or if using {@link ConfigurableTapServlet}, set as the <i>user_identifier</i> in the tap.properties file i.e. <code>user_identifier = tap.auth.ConfigurableUserIdentifier</code></p>
+	 * <p>This method should either be called during the custom servlet initialisation or if using {@link ConfigurableTapServlet}, 
+	 * set as the <i>user_identifier</i> in the tap.properties file i.e. 
+	 * <code>user_identifier = tap.auth.ConfigurableUserIdentifier</code></p>
 	 * 
 	 * @param tapConfig	The content of the TAP configuration file.
 	 * 
-	 * @throws TAPException		If any required fields are missing in the tap.properties file.
+	 * @throws UWSException		If any required fields are missing in the tap.properties file, or any errors occur trying to initialize the API client
 	 * 
 	 */
-	public ConfigurableAuthUserIdentifier(final Properties tapConfig) throws TAPException {
+	public ConfigurableAuthUserIdentifier(final Properties tapConfig) throws UWSException{
 		this.sessionIDHeaderField = tapConfig.getProperty(KEY_SESSIONID_HEADER_FIELD); 
 		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
 		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
@@ -118,11 +123,16 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		// if any of the required fields are missing, throw IllegalArgumentException
 		if (this.sessionIDHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
 			this.responsedPseudoField == null || this.responseAllowedTablesField == null){ 
-			throw new TAPException(" " + KEY_UDFS + ": " + (udfOffset + matcher.start(GROUP_SIGNATURE)) + "-" + (udfOffset + matcher.end(GROUP_SIGNATURE)) + ")");
-
+			// TODO: need a different exception I think
+			throw new UWSException("Missing parameters "+ 
+				String.join(", ", KEY_SESSIONID_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_TABLES_FIELD)+
+				" to setup auth in tap.properties");
 		}
-		
-		this.api = new JSONAPIClient(this.authURL, "POST");
+		try{
+			this.api = new JSONAPIClient(this.authURL, "POST");
+		} catch (Exception e){
+			throw new UWSException(e);
+		}
 	}
 
 	/**
@@ -150,12 +160,11 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
         	authHeaders.put(this.sessionIDHeaderField, sessionToken);
-
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
-        } catch (TAPException TAPe) {
-        	// TODO: properly handle this exception
-        	TAPe.getHttpErrorCode();
-        }
+        } catch (Exception e) {
+			throw new UWSException(e);
+		}
+        
         HashMap<String, Object> permissions = new HashMap<>();
         // Add allowed tables
         ArrayList<TAPTable> allowedTablesFromAPI = new ArrayList<TAPTable>();
