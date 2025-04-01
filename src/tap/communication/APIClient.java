@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.Collections;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -116,6 +117,18 @@ public abstract class APIClient<T> {
 			throw new IllegalArgumentException("requestMethod must be either \"POST\" or \"GET\"");
 		}
 	}
+
+	/**
+	 * Send the request only with no data. Useful for GET requests. 
+	 * @return response as object T
+	 */
+	public T sendRequest(){
+		// Attach empty headers
+		Map<String, String> headers = Collections.<String, String>emptyMap();
+		return convertFromString(getStringResponse(headers, ""));
+
+	}
+
 
 	/**
 	 * Only send header data with request, without any payload 
