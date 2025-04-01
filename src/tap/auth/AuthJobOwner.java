@@ -97,7 +97,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 
 	public boolean canAccessTable(TAPTable table){
 		for(TAPTable userTable : allowedTables){
-			if (userTable.getFullName().equals(table.getFullName()){
+			if (userTable.getFullName().equals(table.getFullName())) {
 				return true;
 			}
 		}
