@@ -1,25 +1,67 @@
 package tap.metadata;
+
+/*
+ * This file is part of TAPLibrary.
+ *
+ * TAPLibrary is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * TAPLibrary is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with TAPLibrary.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Copyright 2015-2021 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ *                       Astronomisches Rechen Institut (ARI)
+ */
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import java.lang.UnsupportedOperationException;
+import java.util.HashMap;
+import uk.ac.starlink.votable.VOSerializer;
+
 import tap.metadata.TAPSchema;
 import tap.resource.TAPResource;
 import tap.TAPException;
-import uws.UWSToolBox;
-import uk.ac.starlink.votable.VOSerializer;
+import tap.metadata.TAPTable;
 import tap.resource.TAP;
-import uws.UWSToolBox;
-import uws.job.user.JobOwner;
 import tap.auth.AuthJobOwner;
-import java.lang.UnsupportedOperationException;
-import java.util.HashMap;
+
+import uws.UWSToolBox;
 import uws.UWSException;
 import uws.service.log.UWSLog.LogLevel;
-import tap.metadata.TAPTable;
+import uws.UWSToolBox;
 
+
+/**
+ * <p>
+ * Authenticated replacement for {@link TAPMetadata}. Used to replace the /tables endpoint
+ * </p>
+ * <p>
+ * The main difference is this on request, the request will be resolved to a {@link AuthJobOwner}, and
+ * the xml return data will only include tables allowed by the user. 
+ * </p>
+ *
+ * <p>
+ * Previous write methods write and writeSchema that do not have a {@link AuthJobOwner} parameter and would previously write all tables in the 
+ * database, are made unsupported, and will throw an error if they are called.
+ * </p>
+ *
+ * @author Anthony Heng (AAO)
+ * @version 04/2025
+ *
+ * @see TAPMetadata
+ */
 public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 
 	/** Resource name of the TAP metadata. This name is also used - in this class - in the TAP URL to identify this resource.
@@ -29,21 +71,27 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 	 * tables they do not have access to. This is just to replace the endpoint /tables.
 	 *       
 	 * */
-	 // Replace the tables resource
 	
-
+	
+	/** Resource name of the TAP metadata. This name is also used - in this class - in the TAP URL to identify this resource.
+	 * Here it corresponds to the following URI: ".../tables", replacing that in {@link TAPMetadata} */
 	public static String RESOURCE_NAME = "tables";
 
+	/** TAP service owning AuthTAPMetadata as a resource */
 	private TAP tap;
 	
 	// Constructor
+	/**
+	 * Constructs AuthTAPMetadata with a given TAP service
+	 * @param  tapService The TAP service AuthTAPMetadata belongs to
+	 */
 	public AuthTAPMetadata(TAP tapService){
 		super();
 		this.tap = tapService;
 	}
 
 	@Override
-	public boolean executeResource(HttpServletRequest request, HttpServletResponse response) throws IOException{
+	public boolean executeResource(HttpServletRequest request, HttpServletResponse response) throws IOException, TAPException{
 		response.setContentType("application/xml");
 		response.setCharacterEncoding(UWSToolBox.DEFAULT_CHAR_ENCODING);
 
@@ -56,7 +104,7 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 		}catch(UWSException ue){
 			this.tap.getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Can not identify the HTTP request user!", ue);
 			// TODO: errors if I uncomment this?
-			//throw ue;
+			throw TAPException(ue);
 		}
 		
 		write(writer, user);
@@ -64,11 +112,24 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 	}
 
 	// Override methods that used to return all data available and have them throw exceptions
+	/**
+	 * {@inheritDoc}
+	 * In AuthTAPMetadata this method is not supported and throws an {@link UnsupportedOperationException}.
+	 * 
+	 * @throws UnsupportedOperationException if this method is called.
+	 */
 	@Override 
 	public void write(final PrintWriter writer) throws UnsupportedOperationException{
 		throw new UnsupportedOperationException("Attempted to access universal method of AuthTAPMetaData");
 		
 	}
+
+	/**
+	 * {@inheritDoc}
+	 * In AuthTAPMetadata this method is not supported and throws an {@link UnsupportedOperationException}.
+	 * 
+	 * @throws UnsupportedOperationException if this method is called.
+	 */
 
 	@Override 
 	protected void writeSchema(TAPSchema s, final PrintWriter writer) throws UnsupportedOperationException{
@@ -77,6 +138,15 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 	}
 
 	// Use old method, however call writeSchema that filters out the tables the user can't access
+	
+	/**
+	 * Format in XML user-specific metadata set and write it in the given writer.
+	 * 
+	 * @param writer	Stream in which the XML representation of this metadata must be written.
+	 * @param user      User in which to write the metadata for. 
+	 *
+	 * @throws IOException	If there is any error while writing the XML in the given writer.
+	 */
 	public void write(final PrintWriter writer, AuthJobOwner user) throws IOException{
 		writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 
@@ -92,7 +162,9 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 		writer.println("<vosi:tableset xmlns:vosi=\"http://www.ivoa.net/xml/VOSITables/v1.0\" xmlns:vod=\"http://www.ivoa.net/xml/VODataService/v1.1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.ivoa.net/xml/VODataService/v1.1 http://www.ivoa.net/xml/VODataService/v1.1 http://www.ivoa.net/xml/VOSITables/v1.0 http://vo.ari.uni-heidelberg.de/docs/schemata/VOSITables-v1.0.xsd\">");
 		
 		for(TAPSchema s : schemas.values()){
-			writeSchema(s, writer, user);
+			if user.canAccessSchema(s){
+				writeSchema(s, writer, user);
+			}
 		}
 
 		writer.println("</vosi:tableset>");
@@ -100,7 +172,33 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 		UWSToolBox.flush(writer);
 	}
 
-	// Slight difference: each table is checked to see if its owned by the user
+	/**
+	 * <p>Format in XML the given schema and then write it in the given writer. 
+	 * Only write the tables in the schema that the user is allowed to access</p>
+	 *
+	 * <p>Written lines:</p>
+	 * <pre>
+	 * &lt;schema&gt;
+	 * 	&lt;name&gt;...&lt;/name&gt;
+	 * 	&lt;title&gt;...&lt;/title&gt;
+	 * 	&lt;description&gt;...&lt;/description&gt;
+	 * 	&lt;utype&gt;...&lt;/utype&gt;
+	 * 		// call #writeTable(TAPTable, PrintWriter) for each table
+	 * &lt;/schema&gt;
+	 * </pre>
+	 *
+	 * <p><i>Note:
+	 * 	When NULL an attribute or a field is not written. Here this rule concerns: description and utype.
+	 * </i></p>
+	 *
+	 * @param s			The schema to format and to write in XML.
+	 * @param writer	Output in which the XML serialization of the given schema must be written.
+	 * @param user      User in which the schema is written for
+	 *
+	 * @throws IOException	If the connection with the HTTP client has been either canceled or closed for another reason.
+	 *
+	 * @see #writeTable(TAPTable, PrintWriter)
+	 */
 	protected void writeSchema(TAPSchema s, PrintWriter writer, AuthJobOwner user) throws IOException{
 		final String prefix = "\t\t";
 		writer.println("\t<schema>");

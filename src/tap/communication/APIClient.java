@@ -47,16 +47,15 @@ import tap.TAPException;
  *
  * <p>
  * When extending this class, it is expected the subclass will have a specific data structure/class in mind, with it's own conversion
- * to bytecode and parsing method from String. Thus this class provides abstract functions convertToBytes and convertFromString to define
+ * to bytecode and parsing method from String. Thus this class provides abstract functions convertToString and convertFromString to define
  * these behaviours. 
  * 
- * Existing classes are included for handling common data formats, including 
+ * Existing classes are included for handling common data formats, including {@link JSONAPIClient} and {@link DefaultAPIClient}
  * </p>
  * 
  * 
  * @author Anthony Heng (AAO)
- * @version TBD?
- * @since TBD?
+ * @version 04/2025
  */
 public abstract class APIClient<T> {
 
@@ -92,7 +91,7 @@ public abstract class APIClient<T> {
 	/* CONSTRUCTORS */
 	/* ************ */
 	/**
-	 * Builds the client to a given URL, and what kind of requests to send, 
+	 * Create a APIClient for a given URL, and what kind of requests to send, 
 	 * and the encoding used for payloads
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
@@ -104,7 +103,7 @@ public abstract class APIClient<T> {
 	}
 
 	/**
-	 * Builds the client to a given URL, what kind of requests to send
+	 * Create a APIClient for a given URL, what kind of requests to send
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
@@ -181,6 +180,9 @@ public abstract class APIClient<T> {
 	 * @param  headers    Header fields to send to the API URL
 	 * @param  payloadStr Payload in string format. Will have been converted from format T using convertFromString()
 	 * @return            Data from API based on request
+	 *
+	 * @throws IOException If the connection the API url fails. 
+	 * @throws TAPException If the HTTP response is a non-successful one (>=200 and <300)
 	 */
 	protected String getStringResponse(Map<String, String> headers, String payloadStr){
 			HttpURLConnection conn;
