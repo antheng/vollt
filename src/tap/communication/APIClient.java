@@ -34,6 +34,8 @@ import java.nio.charset.Charset;
 import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.net.SocketTimeoutException;
+
 
 import tap.TAPException;
 
@@ -121,9 +123,9 @@ public abstract class APIClient<T> {
 			this.url = new URI(urlString).toURL();
 		} catch (URISyntaxException e){
         	// rethrow malformed URI exceptions as TAP exceptions
-        	throw new TAPException(e.getMessage());
+        	throw new TAPException("URISyntaxException : "+e.getMessage());
 		} catch (MalformedURLException e){
-        	throw new TAPException(e.getMessage());
+        	throw new TAPException("MalformedURLException : "+e.getMessage());
         }
 
 		if (requestMethod.equals("POST") || requestMethod.equals("GET")){
@@ -175,10 +177,10 @@ public abstract class APIClient<T> {
 	 * @param  inputStream input stream to read data from
 	 * @return Data read from the input stream 
 	 */
-	private String readFromStream(InputStream inputStream) throws IOException{
+	private String readFromStream(InputStream inputStream, String streamEncoding) throws IOException{
 
 		StringBuilder sb = new StringBuilder();
-		InputStreamReader reader = new InputStreamReader(inputStream, Charset.forName(this.stringEncoding));
+		InputStreamReader reader = new InputStreamReader(inputStream, Charset.forName(streamEncoding));
 
 		BufferedReader br = new BufferedReader(reader);
 
@@ -203,7 +205,6 @@ public abstract class APIClient<T> {
 	 */
 	protected String getStringResponse(Map<String, String> headers, String payloadStr) throws TAPException, IOException{
 			HttpURLConnection conn;
-			
 			// Create URL object
         	conn = (HttpURLConnection) url.openConnection();
         
@@ -211,14 +212,13 @@ public abstract class APIClient<T> {
 	        conn.setRequestMethod(this.requestMethod);
 
 
-	        // Add all headers to the request
-	        for (Map.Entry<String, String> entry : headers.entrySet()) {
-            	conn.setRequestProperty(entry.getKey(), entry.getValue());
-			}
-
 			conn.setConnectTimeout(5000); //set timeout to 5 seconds TODO: Set this in constructor
 
 
+	        // Add all headers to the request
+	        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            	conn.setRequestProperty(entry.getKey(), entry.getValue());
+            	
 	        if (this.requestMethod.equals("POST")){
 	        	conn.setDoOutput(true); // Enable writing output to the request
 	        	// Send payload
@@ -230,8 +230,13 @@ public abstract class APIClient<T> {
 				} catch (IOException ioe){
 	        		throw new TAPException("Failed to send output data through connection to "+url.toString()+" : "+ioe.getMessage());
 				}
-	        } 
+	        }
+	        try{
+				conn.connect();
+	        } catch (SocketTimeoutException e){
+	        	throw new TAPException("API connection to "+conn.getURL().toString()+" timed out : "+e.getMessage());
 
+	        }
 			// RESPONSE
             InputStreamReader apiReader; 
             
@@ -243,24 +248,43 @@ public abstract class APIClient<T> {
 	        	throw new TAPException("API Communication Error at "+this.url.toString()+": No Response Code : "+ioe.getMessage());
 	        }
 
+	        String responseEncoding = conn.getContentEncoding();
             if (responseCode >= 200 && responseCode < 300){ // If response is a success code
-            	return readFromStream(conn.getInputStream());
+            	return readFromStream(conn.getInputStream(), this.stringEncoding);
             } else{
-            	String errorMessage = readFromStream(conn.getErrorStream());
+            	String errorMessage = readFromStream(conn.getErrorStream(), this.stringEncoding);
 	            // Throw an exception with the error details
 	            throw new TAPException("API Communication Error at "+this.url.toString()+": Response code " + responseCode + ": " + errorMessage.toString().trim(), responseCode);
             }
 	}
 
+	/* ******* */
+	/* GETTERS */
+	/* ******* */
+	/**
+	 * Get the request method used for API requests (either POST or GET)
+	 * 
+	 * @return	The request method (either POST or GET)
+	 */
 	public String getRequestMethod(){
 		return requestMethod;
 	}
 
+
+	/**
+	 * Get the URL object for the API resource
+	 * 
+	 * @return URL object for the API resource
+	 */
 	public URL getURL(){
 		return url;
 	}
 
-
+	/**
+	 * Get the text encoding for Strings, most often UTF-8
+	 * 
+	 * @return name of the text encoding for both request and response bodies
+	 */
 	public String getStringEncoding(){
 		return this.stringEncoding;
 	}
