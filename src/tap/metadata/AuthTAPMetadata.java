@@ -91,7 +91,7 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 	}
 
 	@Override
-	public boolean executeResource(HttpServletRequest request, HttpServletResponse response) throws IOException, TAPException{
+	public boolean executeResource(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		response.setContentType("application/xml");
 		response.setCharacterEncoding(UWSToolBox.DEFAULT_CHAR_ENCODING);
 
@@ -104,7 +104,7 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 		}catch(UWSException ue){
 			this.tap.getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Can not identify the HTTP request user!", ue);
 			// TODO: errors if I uncomment this?
-			throw TAPException(ue);
+			throw new IOException("Failure to resolve user from request: "+ue.getMessage());
 		}
 		
 		write(writer, user);
@@ -121,7 +121,6 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 	@Override 
 	public void write(final PrintWriter writer) throws UnsupportedOperationException{
 		throw new UnsupportedOperationException("Attempted to access universal method of AuthTAPMetaData");
-		
 	}
 
 	/**
@@ -162,7 +161,7 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 		writer.println("<vosi:tableset xmlns:vosi=\"http://www.ivoa.net/xml/VOSITables/v1.0\" xmlns:vod=\"http://www.ivoa.net/xml/VODataService/v1.1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.ivoa.net/xml/VODataService/v1.1 http://www.ivoa.net/xml/VODataService/v1.1 http://www.ivoa.net/xml/VOSITables/v1.0 http://vo.ari.uni-heidelberg.de/docs/schemata/VOSITables-v1.0.xsd\">");
 		
 		for(TAPSchema s : schemas.values()){
-			if user.canAccessSchema(s){
+			if (user.canAccessSchema(s)){
 				writeSchema(s, writer, user);
 			}
 		}

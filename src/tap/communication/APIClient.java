@@ -18,23 +18,24 @@ package tap.communication;
  * Copyright 2015-2021 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
+import java.io.DataOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.util.Map;
-import java.util.Collections;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.lang.IllegalArgumentException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.MalformedURLException;
-import java.io.IOException;
-import java.lang.IllegalArgumentException;
-import java.io.BufferedReader;
-import java.nio.charset.Charset;
-import java.io.DataOutputStream;
-import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.Charset;
+import java.util.Map;
+import java.util.Collections;
+import java.util.List;
 
 
 import tap.TAPException;
@@ -266,7 +267,7 @@ public abstract class APIClient<T> {
 	 * 
 	 * @return	The request method (either POST or GET)
 	 */
-	public String getRequestMethod(){
+	public String getRequestMethod() {
 		return requestMethod;
 	}
 
@@ -276,7 +277,7 @@ public abstract class APIClient<T> {
 	 * 
 	 * @return URL object for the API resource
 	 */
-	public URL getURL(){
+	public URL getURL() {
 		return url;
 	}
 
@@ -285,7 +286,7 @@ public abstract class APIClient<T> {
 	 * 
 	 * @return name of the text encoding for both request and response bodies
 	 */
-	public String getStringEncoding(){
+	public String getStringEncoding() {
 		return this.stringEncoding;
 	}
 

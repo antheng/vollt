@@ -119,16 +119,14 @@ public class AuthJobOwner extends DefaultJobOwner {
 		}
 	}
 
-<<<<<<< HEAD
 	/**
 	 * Checks if a given TAPJob is allowed to be run by the owner
 	 * @param  job TAPJob to check against
 	 * @return     <code>true</code> if the this JobOwner meets all requirements for running the job <code>false</code> otherwise.
+	 *
+	 * @throws ParseException If the query is malformed
 	 */
-	private boolean checkTAPJobAllowed(TAPJob job){
-=======
 	private boolean checkTAPJobAllowed(TAPJob job) throws ParseException {
->>>>>>> b3b213b (Fixing up exception handling)
 		TAPParameters tapParams = job.getTapParams();
 		// If TAPJob is allowed
 		if (tapParams.getRequest().equals(TAPJob.REQUEST_DO_QUERY)){
