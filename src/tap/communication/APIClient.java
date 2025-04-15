@@ -157,6 +157,20 @@ public abstract class APIClient<T> {
 		return convertFromString(getStringResponse(headers, ""));
 
 	}
+	
+	/**
+	 * Send a request only with a payload. The payload will be converted to a String to send through.
+	 * The payload will not have any effect if the request method is GET
+	 * 
+	 * @param payload payload to send. Only for POST requests
+	 * @return response as an object of type T
+	 */
+	public T sendRequest(T payload) throws TAPException, IOException{
+		String payloadAsString = convertToString(payload);
+		Map<String, String> headers = Collections.<String, String>emptyMap();
+		return convertFromString(getStringResponse(headers, payloadAsString));
+
+	}
 
 	/**
 	 * Send a request with a payload. The payload will be converted to a String to send through.
@@ -171,6 +185,8 @@ public abstract class APIClient<T> {
 		return convertFromString(getStringResponse(headers, payloadAsString));
 
 	}
+
+
 
 	/**
 	 * Load the data from a given InputStream. Used by getStringResponse for loading the 
@@ -215,32 +231,26 @@ public abstract class APIClient<T> {
 
 			conn.setConnectTimeout(5000); //set timeout to 5 seconds TODO: Set this in constructor
 
+			//Transform payload to encoding
 
 	        // Add all headers to the request
-	        for (Map.Entry<String, String> entry : headers.entrySet()) {
+	        for (Map.Entry<String, String> entry : headers.entrySet()) 
             	conn.setRequestProperty(entry.getKey(), entry.getValue());
             	
 	        if (this.requestMethod.equals("POST")){
 	        	conn.setDoOutput(true); // Enable writing output to the request
 	        	// Send payload
-				DataOutputStream apiOut = new DataOutputStream(conn.getOutputStream());
+				OutputStream apiOut = conn.getOutputStream();
 				try{
-					apiOut.writeChars(payloadStr);
+					byte[] payloadBytes = payloadStr.getBytes(this.stringEncoding);
+					apiOut.write(payloadBytes);
 					apiOut.flush();
 					apiOut.close();
 				} catch (IOException ioe){
 	        		throw new TAPException("Failed to send output data through connection to "+url.toString()+" : "+ioe.getMessage());
 				}
 	        }
-	        try{
-				conn.connect();
-	        } catch (SocketTimeoutException e){
-	        	throw new TAPException("API connection to "+conn.getURL().toString()+" timed out : "+e.getMessage());
-
-	        }
 			// RESPONSE
-            InputStreamReader apiReader; 
-            
 			// Read response
 	        int responseCode;
 	        try{
@@ -250,10 +260,13 @@ public abstract class APIClient<T> {
 	        }
 
 	        String responseEncoding = conn.getContentEncoding();
+	        if (responseEncoding == null ) // Encoding not specified, attempt to use same encoding as client
+            	responseEncoding = this.stringEncoding;
+
             if (responseCode >= 200 && responseCode < 300){ // If response is a success code
-            	return readFromStream(conn.getInputStream(), this.stringEncoding);
-            } else{
-            	String errorMessage = readFromStream(conn.getErrorStream(), this.stringEncoding);
+            	return readFromStream(conn.getInputStream(), responseEncoding);
+            } else {
+            	String errorMessage = readFromStream(conn.getErrorStream(), responseEncoding);
 	            // Throw an exception with the error details
 	            throw new TAPException("API Communication Error at "+this.url.toString()+": Response code " + responseCode + ": " + errorMessage.toString().trim(), responseCode);
             }

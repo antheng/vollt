@@ -66,4 +66,3 @@ public class JSONAPIClient extends APIClient<JSONObject> {
 		return new JSONObject(data);
 	}
 }
-

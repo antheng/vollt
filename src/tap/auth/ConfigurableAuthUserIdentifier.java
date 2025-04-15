@@ -20,8 +20,8 @@ package tap.auth;
 import java.util.Properties;
 import java.util.HashMap;
 import java.util.Map;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.ServletException;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONArray;
@@ -30,7 +30,9 @@ import org.json.JSONObject;
 import tap.TAPException;
 import tap.communication.APIClient;
 import tap.communication.JSONAPIClient;
+import tap.metadata.TAPSchema;
 import tap.metadata.TAPTable;
+import tap.auth.AuthJobOwner;
 
 import uws.service.UserIdentifier;
 import uws.service.UWSUrl;
@@ -68,7 +70,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
 	/* API SETUP KEYS */
 	/* Property name used to set the request header field name of the session */
-	public final static String KEY_SESSIONID_HEADER_FIELD = "sessionid_header_field";
+	public final static String KEY_SESSIONID_HEADER_FIELD = "auth_header_field";
 	/* Property name used to set the url used for authentication */
 	public final static String KEY_AUTH_URL_FIELD = "session_authentication_url";
 
@@ -76,11 +78,11 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	public final static String KEY_RESP_SESSIONID_FIELD = "response_id_field";
 	/* Property name used to set the name of the key in the authentication URL response, which stores the username*/
 	public final static String KEY_RESP_PSEUDO_FIELD = "response_pseudo_field";
-	/* Property name used to set the name of the key in the authentication URL response, which stores the list of allowed tables by the user*/
-	public final static String KEY_RESP_ALLOWED_TABLES_FIELD = "response_tables_field";
+	/* Property name used to set the name of the key in the authentication URL response, which stores the list of allowed schemas and tables by the user*/
+	public final static String KEY_RESP_ALLOWED_ACCESS_FIELD = "response_allowed_access_field";
 
 
-	/* URL to send authentication requests to verify cookie. Changed in tap.properties under sessionid_header_field */
+	/* URL to send authentication requests to verify token. Changed in tap.properties under sessionid_header_field */
 	private String authURL; 
 
 	/* Field in the request header that contains the session ID, sent to authURL for verification. Changed in tap.properties under 
@@ -96,9 +98,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* From the API response the field name of the username. Can be changed in tap.properties under response_pseudo_field */
 	private String responsedPseudoField; 
 
-	/* From the API response the field name of the list of allowed tables the user can access. Can be changed in tap.properties 
+	/* From the API response the field name of the list of allowed schemas and tables the user can access. Can be changed in tap.properties 
 	 * under response_tables_field */
-	private String responseAllowedTablesField;
+	private String responseAllowedDataField;
 
 
 	/**
@@ -119,13 +121,13 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
 		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
-		this.responseAllowedTablesField = tapConfig.getProperty(KEY_RESP_ALLOWED_TABLES_FIELD);
+		this.responseAllowedDataField = tapConfig.getProperty(KEY_RESP_ALLOWED_ACCESS_FIELD);
 		// if any of the required fields are missing, throw IllegalArgumentException
 		if (this.sessionIDHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
-			this.responsedPseudoField == null || this.responseAllowedTablesField == null){ 
+			this.responsedPseudoField == null || this.responseAllowedDataField == null){ 
 			// TODO: need a different exception I think
 			throw new UWSException("Missing parameters "+ 
-				String.join(", ", KEY_SESSIONID_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_TABLES_FIELD)+
+				String.join(", ", KEY_SESSIONID_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
 				" to setup auth in tap.properties");
 		}
 		try{
@@ -140,6 +142,8 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	 *
 	 * The authentication headers will be extracted from the request, which will be up to the servlet or frontend to append using any given method (e.g. cookies)
 	 *
+	 * The response body is expected to be a json object with a "allowedAccess"
+	 * 
 	 * @param urlInterpreter	The interpreter of the request URL.
 	 * @param request			The request.
 	 * 
@@ -150,14 +154,13 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	 * @see UWSService#executeRequest(HttpServletRequest, HttpServletResponse)
 	 */
 	@Override
-	public JobOwner extractUserId(UWSUrl urlInterpreter, HttpServletRequest request) throws UWSException {
+	public AuthJobOwner extractUserId(UWSUrl urlInterpreter, HttpServletRequest request) throws UWSException {
         JSONObject jsonResponse;
         try{
         	String sessionToken = request.getHeader(this.sessionIDHeaderField);
         	if (sessionToken == null){
-        		// throw exception appropriate: "Field "+sessionIDHeaderField +" not in request header"
+        		throw new ServletException("Authentication header missing from request");
         	} 
-
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
         	authHeaders.put(this.sessionIDHeaderField, sessionToken);
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
@@ -166,23 +169,30 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		}
         
         HashMap<String, Object> permissions = new HashMap<>();
-        // Add allowed tables
-        ArrayList<TAPTable> allowedTablesFromAPI = new ArrayList<TAPTable>();
+        // Add allowed access information
+        ArrayList<TAPSchema> allowedDataFromAPI = new ArrayList<TAPSchema>();
         
-        JSONArray tablesjson = jsonResponse.getJSONArray(this.responseAllowedTablesField);
-        // Loop over json array of tables. Extract Object and convert to string to build a new TAPTable
-        for (int i = 0; i<tablesjson.length(); i++){
-            allowedTablesFromAPI.add(new TAPTable(tablesjson.getString(i)));
+        // Assumed: array of schema json objects
+        JSONObject accessjson = jsonResponse.getJSONObject(this.responseAllowedDataField);
+        for (String schemaName : accessjson.keySet()){ // Contained object is a struct of schemas, which are keys to table lists. See doc for an example.
+        	TAPSchema schemaToAdd = new TAPSchema(schemaName);
+        	JSONArray tableNamesArr = accessjson.getJSONArray(schemaName);
+        	for (int i = 0; i<tableNamesArr.length(); i++)
+	            schemaToAdd.addTable(tableNamesArr.getString(i));
+	        allowedDataFromAPI.add(schemaToAdd);
+
         }
-        permissions.put("allowedTables", allowedTablesFromAPI);
+        
+        // Loop over json array of tables. Extract Object and convert to string to build a new TAPSchema
+        permissions.put("allowedData", allowedDataFromAPI);
 
         return restoreUser(jsonResponse.getString(this.responseUserIDField), 
         	jsonResponse.getString(this.responsedPseudoField), permissions);
 	}
 
 	@Override
-	public JobOwner restoreUser(String id, String pseudo, Map<String, Object> otherData) {
-		return new AuthJobOwner(id, pseudo, (List<TAPTable>) otherData.get("allowedTables"));
+	public AuthJobOwner restoreUser(String id, String pseudo, Map<String, Object> otherData) {
+		return new AuthJobOwner(id, pseudo, (List<TAPSchema>) otherData.get("allowedData"));
 	}
 	
 }

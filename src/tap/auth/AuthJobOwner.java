@@ -19,12 +19,14 @@ package tap.auth;
  */
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import adql.parser.ADQLParser;
 import adql.parser.ParseException;
-import adql.db.DBTable;
 import adql.db.DBChecker;
 import adql.db.exception.UnresolvedTableException;
+import adql.db.exception.UnresolvedIdentifiersException;
 
 import tap.TAPJob;
 import tap.parameters.TAPParameters;
@@ -54,21 +56,27 @@ import uws.job.user.DefaultJobOwner;
  */
 public class AuthJobOwner extends DefaultJobOwner {
 	
-	protected List<TAPTable> allowedTables; 
+	protected LinkedHashMap<String, TAPSchema> allowedData; 
 
 	/**
 	 * Builds a Job Owner which has the given ID.
 	 * Its pseudo will also be equal to the given ID.
 	 * 
 	 * @param name	ID/Pseudo of the Job Owner to create.
+	 * @param allowedDataList List of allowed data this jobowner is allowed to access, laid out like a list of Schemas
 	 */
-	public AuthJobOwner(final String name, List<TAPTable> allowedTables){
-		this(name, name, allowedTables);
+	public AuthJobOwner(final String name, List<TAPSchema> allowedDataList){
+		this(name, name, allowedDataList);
 	}
 
-	public AuthJobOwner(final String id, final String pseudo, List<TAPTable> allowedTables){
+	public AuthJobOwner(final String id, final String pseudo, List<TAPSchema> allowedDataList){
 		super(id, pseudo);
-		this.allowedTables = allowedTables;
+		// Load Schemas into the linked list
+		allowedData = new LinkedHashMap<String, TAPSchema>();
+		for (TAPSchema schemaEntry : allowedDataList){
+			allowedData.put(schemaEntry.getADQLName(), schemaEntry);
+		}
+
 	}
 
 	/**
@@ -92,11 +100,10 @@ public class AuthJobOwner extends DefaultJobOwner {
 	}
 
 	/**
-	 * Tells whether this user has the right to execute and to abort the given job. 
+	 * {@inheritDoc}
 	 * 
 	 * For authenticated job owners, a job can be executed if the owner owns the job, and the resources (e.g. tables, schemas) they 
-	 * are trying to access are allowed by them. 
-	 * 
+	 * are trying to access are allowed by them.  
 	 */
 	@Override
 	public boolean hasExecutePermission(UWSJob job) {
@@ -108,19 +115,17 @@ public class AuthJobOwner extends DefaultJobOwner {
 				boolean tapJobAllowed = checkTAPJobAllowed((TAPJob) job);
 				return (nullCheck||isOwner) && tapJobAllowed; 
 			} catch (ParseException e){
-				// Cannot run this job due to malformed query, return false
-				// TODO: I would like a way to report the reason why it failed and return false...
-				// return false;
+				// Cannot run this job due to malformed query
 				return true; // Let it run. It'll get caught further down the line during execution and produce an informative exception
 							 // Can't do it here as JobOwner.hasExecutePermission() does not normally throw checked exceptions
 			}
-		} else{
+		} else {
 			return (nullCheck||isOwner);  
 		}
 	}
 
 	/**
-	 * Checks if a given TAPJob is allowed to be run by the owner
+	 * Checks if a given TAPJob is allowed to be run by the owner. Authenticated users will be allowed to 
 	 * @param  job TAPJob to check against
 	 * @return     <code>true</code> if the this JobOwner meets all requirements for running the job <code>false</code> otherwise.
 	 *
@@ -130,11 +135,17 @@ public class AuthJobOwner extends DefaultJobOwner {
 		TAPParameters tapParams = job.getTapParams();
 		// If TAPJob is allowed
 		if (tapParams.getRequest().equals(TAPJob.REQUEST_DO_QUERY)){
-	        DBChecker allowedTableChecker = new DBChecker(this.allowedTables);
+			// Build collection of TAPTables
+	        ArrayList<TAPTable> allowedTables = new ArrayList<>();
+	        for (TAPSchema userSchema : this.allowedData.values())
+	        	userSchema.forEach(allowedTables::add); // Add those tables to the array list of tables
+	        											// Note: this works as TAPSchemas implements Iterable<TAPTable> 
+	        DBChecker allowedTableChecker = new DBChecker(allowedTables);
 	        // Build ADQL Parser with new checker
 	        ADQLParser adqlParse = new ADQLParser(allowedTableChecker);
 	        // Parse the query from the request   
 	        String queryString = tapParams.getQuery();
+
 	        // Parse the query for the sake of getting checked by allowedTableChecker. 
 	        // No need to store the result as ADQLExecutor will do that later
 	        try{
@@ -142,7 +153,10 @@ public class AuthJobOwner extends DefaultJobOwner {
 	        } catch(UnresolvedTableException ute){
 	        	// If a parse runs into this exception, then it is not on the list of allowed tables. Return false
 	        	return false;
-
+	        } catch(UnresolvedIdentifiersException e){
+	        	// This is also a possibility for not being on the list of allowed tables: 
+	        	// if the parse does not find the table, unknown tables are reported as "Unknown table". in a UnresolvedIdentifiersException.
+	        	return false;
 	        }
 	        // parsed without any issues from the DBChecker, continue on to return true
 	    }
@@ -150,44 +164,45 @@ public class AuthJobOwner extends DefaultJobOwner {
 	}
 
 	/**
-	 * Returns the list of tables the user is allowed to query
-	 * @return List of TAPTables representing which tables the user is allowed to access
+	 * Returns the list of data the user is allowed to query (i.e. the schemas)
+	 * @return List of TAPSchemas representing which tables the user is allowed to access
 	 */
-	public List<TAPTable> getAllowedTables(){
-		return allowedTables;
+	public LinkedHashMap<String, TAPSchema> getallowedData(){
+		return allowedData;
 	}
 
 
 	/**
-	 * Checks if table <code>t</code> is accessible by the user
+	 * Checks if table <code>t</code> is accessible by the user. The table must have both a matching schema and matching name within the user's list of allowed data.
 	 * @param  t  table to check
 	 * 
 	 * @return true or false if the user has access to table t
 	 */
 	public boolean canAccessTable(TAPTable t){
-		for(TAPTable userTable : allowedTables){
-			if (userTable.getFullName().equals(t.getFullName())) 
-				return true;
-			
-		}
-		// Table is not found
-		return false;		
+		// System.out.println("Looking for table "+t.getFullName());
+		// Find the schema of the table, ensure get table does not return null
+		// if (t == null)
+		// 	return false;
+		
+		TAPSchema searchSchema = allowedData.get(t.getSchema().getADQLName());
+		if (searchSchema != null){ // schema found
+			// Search for the table within the schema
+			TAPTable searchTable = searchSchema.getTable(t.getADQLName()); 
+			if (searchTable != null) // Final null check. If fails then will move out and return false
+				return (searchTable.getFullName().equals(t.getFullName())); // Check name match
+		} 
+		
+		return false; // All if checks failed. Schema not found, cannot access
 	}
 
 	/**
-	 * Checks if Schema <code>s</code> is accessible by the user
+	 * Checks if Schema <code>s</code> is accessible by the user. It should be if the schema is in the user's list of allowed data
 	 * @param  s  schema to check
 	 * 
 	 * @return true or false if the user has access to the schema
 	 */
 	public boolean canAccessSchema(TAPSchema s){
-		boolean foundSchema = false;
-		for(TAPTable userTable : allowedTables){
-			if (s.equals(userTable.getSchema()))
-				return true;
-		}
-		// Schema has not been found
-		return false;	
+		return (allowedData.get(s.getADQLName()) != null);
 	}
 
 	

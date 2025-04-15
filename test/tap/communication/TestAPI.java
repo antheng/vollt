@@ -32,8 +32,12 @@ import java.net.Socket;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
+import java.util.List;
 import java.io.DataOutputStream;
-
+import java.util.Arrays;
+import java.util.Map;
+import org.json.JSONObject;
+import org.json.JSONException;
 
 // Setup basic HTTP server
 // Driver Class
@@ -57,39 +61,9 @@ public class TestAPI {
 		// Create an HttpServer instance
         server = HttpServer.create(serverAddress, 0);
 
-        
-
-		// Testing json
-		// server.createContext("/json", new HttpHandler() {
-		//    public void handle(HttpExchange exchange) throws IOException {
-		//        	String response = "TestResponse";
-	    //         exchange.sendResponseHeaders(200, response.length());
-	    //         OutputStream os = exchange.getResponseBody();
-	    //         os.write(response.getBytes());
-	    //         os.close();
-		//    }
-		// });
-
-		// // Testing json with headers
-		// server.createContext("/json", new HttpHandler() {
-		//    public void handle(HttpExchange exchange) throws IOException {
-		//        	String response = "TestResponse";
-	    //         exchange.sendResponseHeaders(200, response.length());
-	    //         OutputStream os = exchange.getResponseBody();
-	    //         os.write(response.getBytes());
-	    //         os.close();
-		//    }
-		// });
-        // server.createContext("/json", new JSONResponse());
-
         // Start the server
         server.setExecutor(null); // Use the default executor
         server.start();
-
-        System.out.println("Server is running at "+serverAddress.getAddress()); // Change this to loggingaddress.toString()
-
-        
-	    
     }
 
     // Check if port available to host test server
@@ -113,9 +87,10 @@ public class TestAPI {
 	/**
 	 */
 	@Test
-	public void testDefaultStrGet() throws Exception {
+	public void testDefaultAPIStrGet() throws Exception {
 		// For testing str
-        server.createContext("/str", new HttpHandler() {
+		String endpoint = "/str";
+        server.createContext(endpoint, new HttpHandler() {
 		   public void handle(HttpExchange exchange) throws IOException {
 		       	String response = "TestResponse";
 	            exchange.sendResponseHeaders(200, response.length());
@@ -130,37 +105,32 @@ public class TestAPI {
 		   }
 		});
 
-		// Start tests
-		String serverResponse = "";
-
+        String serverResponse = "";
 		// define a custom HttpHandler
 		try {
 			// Starting client
-			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+"/str", "GET");
+			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "GET");
 			// Sending request
 			serverResponse = client.sendRequest();
 		} catch(Exception e) {
 			fail("Failed to initialize and connect to the test server! : " + getPertinentMessage(e));
+		} finally {
+			assertEquals("TestResponse",serverResponse);
 		}
-
-		// System.out.println((byte)serverResponse.charAt(serverResponse.length()-1));
-		assertEquals("TestResponse",serverResponse);
+		
 	}
 
 	@Test 
-	public void testDefaultStrPost() throws Exception {
-
+	public void testDefaultAPIStrPost() throws Exception {
 		// Test sending text: The text send should be mirrored back
+		String endpoint = "/strMirror";
 		String requestBody = "TestRequest";
-
+        String serverResponse = "";
 
 		// Testing str with headers
-		server.createContext("/strMirror", new HttpHandler() {
+		server.createContext(endpoint, new HttpHandler() {
 		   public void handle(HttpExchange exchange) throws IOException {
-
-		   		exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
-
-	            InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), Charset.forName("UTF-8"));
+	            InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), "UTF-8");
 				StringBuilder sb = new StringBuilder();
 				BufferedReader br = new BufferedReader(reader);
 		        String line;
@@ -169,6 +139,7 @@ public class TestAPI {
 		        }	
 		        br.close();
 		        String response = sb.toString();
+
 	            exchange.sendResponseHeaders(200, response.length());
 	           	OutputStream os = exchange.getResponseBody();
 	            DataOutputStream outStream = new DataOutputStream(os);
@@ -183,44 +154,53 @@ public class TestAPI {
 		// Test sending text: The text send should be mirrored back
 		try {
 			// Starting client
-			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+"/strMirror", "POST");
+			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST");
 			// Sending request
-			HashMap<String, List<String>> headers = new HashMap<>();
 
-			serverResponse = client.sendRequest(headers, requestBody);
+			serverResponse = client.sendRequest(requestBody);
 		} catch(Exception e) {
 			fail("Failed to initialize and connect to the test server! : " + getPertinentMessage(e));
+		} finally {
+			assertEquals(requestBody, serverResponse);
 		}
-
-		// System.out.println((byte)serverResponse.charAt(serverResponse.length()-1));
-		assertEquals(requestBody, serverResponse);
+		
 	}
 
 
 	@Test 
-	public void testDefaultStrHeaders() throws Exception {
+	public void testDefaultAPIStrHeaders() throws Exception {
 		// Testing str with headers
-		server.createContext("/strheader", new HttpHandler() {
+		String endpoint = "/strheader";
+        String serverResponse = "";
+		String expectedResponse = "foo=bar,vollt=tap";
+		HashMap<String, String> headers = new HashMap<>();
+		headers.put("foo", "bar");
+		headers.put("vollt", "tap");
+
+
+		server.createContext(endpoint, new HttpHandler() {
 		   public void handle(HttpExchange exchange) throws IOException {
 		   		Headers headers = exchange.getRequestHeaders();
+		   		exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
 
-		   		StringBuilder sb = new StringBuilder();
-		   		sb.append("Headers: ")
-		        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-		            String key = entry.getKey();
-		            List<String> values = entry.getValue();
-		            sb.append(key).append(":").append(String.join(", ", values)).append("\n");
-		        }
-		        return sb.toString();
+	            InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), "UTF-8");
 
-	            InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), Charset.forName("UTF-8"));
-				StringBuilder sb = new StringBuilder();
-				BufferedReader br = new BufferedReader(reader);
-		        String line;
-		        while ((line = br.readLine()) != null) {
-		            sb.append(line);
-		        }	
-		        br.close();
+		   		StringBuilder sb = new StringBuilder(); 
+		   		if (headers.containsKey("foo")){
+		   			sb.append("foo="+headers.getFirst("foo"));
+		   		}
+		   		else {
+		   			sb.append("FOO NOT IN HEADER\n");
+		   		}
+		   		sb.append(",");
+
+		   		if (headers.containsKey("vollt")){
+		   			sb.append("vollt="+headers.getFirst("vollt"));
+		   		}
+		   		else {
+		   			sb.append("VOLLT NOT IN HEADER\n");
+		   		}
+
 		        String response = sb.toString();
 	            exchange.sendResponseHeaders(200, response.length());
 	            OutputStream os = exchange.getResponseBody();
@@ -234,30 +214,116 @@ public class TestAPI {
 		   }
 		});
 
-		String expectedResponse = "Headers: h1:one, two, three\nfoo:bar"
 		try {
 			// Starting client
-			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+"/strMirror", "POST");
+			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST");
 			// Sending request
-			HashMap<String, List<String>> headers = new HashMap<>();
-			headers.put("h1", Arrays.asList(new String[]{"one", "two", "three"}));
-			headers.put("foo", Arrays.asList(new String[]{"bar"}));
-
 			serverResponse = client.sendRequest(headers);
-			
-
 		} catch(Exception e) {
 			fail("Failed to initialize and connect to the test server! : " + getPertinentMessage(e));
+		} finally{
+			assertEquals(expectedResponse, serverResponse);
 		}
-		assertEquals(expectedResponse, serverResponse);
+	}
 
+	/**
+	 */
+	@Test
+	public void testAPIJSONGet() throws Exception {
+		// For testing str
+		String endpoint = "/jsonget";
 
+        server.createContext(endpoint, new HttpHandler() {
+		   public void handle(HttpExchange exchange) throws IOException {
+		       	String response = new JSONObject()
+         			.put("JSON", "Hello, World!").toString();
 
+	            exchange.sendResponseHeaders(200, response.length());
+	           	OutputStream os = exchange.getResponseBody();
+	            DataOutputStream outStream = new DataOutputStream(os);
+				try{
+					outStream.writeBytes(response);
+					outStream.flush();
+				} finally {
+					outStream.close();
+				}
+		   }
+		});
+
+        JSONObject serverResponse = new JSONObject();
+		// define a custom HttpHandler
+		try {
+			// Starting client
+			JSONAPIClient client = new JSONAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "GET");
+			// Sending request
+			serverResponse = client.sendRequest();
+		} catch(Exception e) {
+			fail("Failed to initialize and connect to the test server! : " + getPertinentMessage(e));
+		} finally {
+			assertEquals("{\"JSON\":\"Hello, World!\"}", serverResponse.toString());
+		}
+		
+	}
+
+	@Test
+	public void testAPIJSONPost() throws Exception {
+		// For testing str
+		String endpoint = "/jsonpost";
+
+        server.createContext(endpoint, new HttpHandler() {
+		   public void handle(HttpExchange exchange) throws IOException {
+		   		// body recieved as string, convert to JSONObject and build response string
+		   		InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), "UTF-8");
+				StringBuilder sb = new StringBuilder();
+				BufferedReader br = new BufferedReader(reader);
+		        String line;
+		        while ((line = br.readLine()) != null) {
+		            sb.append(line);
+		        }	
+		        br.close();
+		        String requestText = sb.toString();
+		   		JSONObject requestJson = new JSONObject(); // Just initialize to fix later
+		   		JSONObject responseJson = new JSONObject(); // Just initialize to fix later
+
+		   		try{
+		       		requestJson = new JSONObject(requestText);
+         		} catch (JSONException je){
+         			responseJson.put("error", "malformed json");
+         		} finally {
+         			responseJson.put("answer", requestJson.getString("vollt"));
+         		}
+
+         		String response = responseJson.toString();
+
+	            exchange.sendResponseHeaders(200, response.length());
+	           	OutputStream os = exchange.getResponseBody();
+	            DataOutputStream outStream = new DataOutputStream(os);
+				try{
+					outStream.writeBytes(response);
+					outStream.flush();
+				} finally {
+					outStream.close();
+				}
+		   }
+		});
+        JSONObject serverResponse = new JSONObject();
+       	JSONObject requestPayload = new JSONObject().put("vollt", "tap");
+		// define a custom HttpHandler
+		try {
+			// Starting client
+			JSONAPIClient client = new JSONAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST");
+			// Sending request
+			serverResponse = client.sendRequest(requestPayload);
+		} catch(Exception e) {
+			fail("Failed to initialize and connect to the test server! : " + getPertinentMessage(e));
+		} finally {
+			assertEquals("{\"answer\":\"tap\"}", serverResponse.toString());
+		}
+		
 	}
 
 	public static final String getPertinentMessage(final Exception ex){
 		return (ex.getCause() == null || ex.getMessage().equals(ex.getCause().getMessage())) ? ex.getMessage() : ex.getCause().getMessage();
 	}
-
 
 }
