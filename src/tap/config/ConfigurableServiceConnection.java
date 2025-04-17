@@ -1060,7 +1060,7 @@ public final class ConfigurableServiceConnection implements ServiceConnection {
 				// Try instantiating with a config first
 			    userIdentifier = newInstance(propValue, KEY_USER_IDENTIFIER, UserIdentifier.class,
 			        new Class<?>[]{Properties.class}, new Object[]{tapConfig});
-			} catch (InstantiationException e) {
+			} catch (TAPException e) {
 				// Allow previous constructor requirements
 			    userIdentifier = newInstance(propValue, KEY_USER_IDENTIFIER, UserIdentifier.class);
 			}
