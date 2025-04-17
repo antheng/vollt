@@ -52,6 +52,7 @@ import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.lang.InstantiationException;
 
 import static tap.config.TAPConfiguration.*;
 
@@ -1054,8 +1055,17 @@ public final class ConfigurableServiceConnection implements ServiceConnection {
 	private void initUserIdentifier(final Properties tapConfig) throws TAPException {
 		// Get the property value:
 		String propValue = getProperty(tapConfig, KEY_USER_IDENTIFIER);
-		if (propValue != null)
-			userIdentifier = newInstance(propValue, KEY_USER_IDENTIFIER, UserIdentifier.class, new Class<?>[]{Properties.class}, new Object[]{tapConfig});
+		if (propValue != null){
+			try {
+				// Try instantiating with a config first
+			    userIdentifier = newInstance(propValue, KEY_USER_IDENTIFIER, UserIdentifier.class,
+			        new Class<?>[]{Properties.class}, new Object[]{tapConfig});
+			} catch (InstantiationException e) {
+				// Allow previous constructor requirements
+			    userIdentifier = newInstance(propValue, KEY_USER_IDENTIFIER, UserIdentifier.class);
+			}
+			
+		}
 	}
 
 	/**
