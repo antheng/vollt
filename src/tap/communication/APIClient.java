@@ -202,7 +202,7 @@ public abstract class APIClient<T> {
 		BufferedReader br = new BufferedReader(reader);
 
         String line;
-        while ((line = br.readLine()) != null) {
+        while ((line = br.readLine()) != null){
             sb.append(line);
         }
         br.close();
@@ -260,8 +260,9 @@ public abstract class APIClient<T> {
 	        }
 
 	        String responseEncoding = conn.getContentEncoding();
-	        if (responseEncoding == null ) // Encoding not specified, attempt to use same encoding as client
+	        if (responseEncoding == null){ // Encoding not specified, attempt to use same encoding as client
             	responseEncoding = this.stringEncoding;
+            }
 
             if (responseCode >= 200 && responseCode < 300){ // If response is a success code
             	return readFromStream(conn.getInputStream(), responseEncoding);
@@ -280,7 +281,7 @@ public abstract class APIClient<T> {
 	 * 
 	 * @return	The request method (either POST or GET)
 	 */
-	public String getRequestMethod() {
+	public String getRequestMethod(){
 		return requestMethod;
 	}
 
@@ -290,7 +291,7 @@ public abstract class APIClient<T> {
 	 * 
 	 * @return URL object for the API resource
 	 */
-	public URL getURL() {
+	public URL getURL(){
 		return url;
 	}
 
@@ -299,7 +300,7 @@ public abstract class APIClient<T> {
 	 * 
 	 * @return name of the text encoding for both request and response bodies
 	 */
-	public String getStringEncoding() {
+	public String getStringEncoding(){
 		return this.stringEncoding;
 	}
 

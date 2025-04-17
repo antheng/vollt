@@ -73,14 +73,14 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	public final static String KEY_SESSIONID_HEADER_FIELD = "auth_header_field";
 	/* Property name used to set the url used for authentication */
 	public final static String KEY_AUTH_URL_FIELD = "session_authentication_url";
-
 	/* Property name used to set the name of the key in the authentication URL response, which stores the user's ID*/
 	public final static String KEY_RESP_SESSIONID_FIELD = "response_id_field";
 	/* Property name used to set the name of the key in the authentication URL response, which stores the username*/
 	public final static String KEY_RESP_PSEUDO_FIELD = "response_pseudo_field";
 	/* Property name used to set the name of the key in the authentication URL response, which stores the list of allowed schemas and tables by the user*/
 	public final static String KEY_RESP_ALLOWED_ACCESS_FIELD = "response_allowed_access_field";
-
+	/* Allow anonymous user generation. Still needs to be handled on the backend */
+	public final static String KEY_RESP_ALLOW_ANONYMOUS = "anonymous_user_support";
 
 	/* URL to send authentication requests to verify token. Changed in tap.properties under sessionid_header_field */
 	private String authURL; 
@@ -101,6 +101,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* From the API response the field name of the list of allowed schemas and tables the user can access. Can be changed in tap.properties 
 	 * under response_tables_field */
 	private String responseAllowedDataField;
+
+	/* Whether to allow the initialisation of an "anonymous" userid. This will grant a id of "-1" to which */
+	private boolean allowAnonymous;
 
 
 	/**
@@ -125,11 +128,12 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		// if any of the required fields are missing, throw IllegalArgumentException
 		if (this.sessionIDHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
 			this.responsedPseudoField == null || this.responseAllowedDataField == null){ 
-			// TODO: need a different exception I think
 			throw new UWSException("Missing parameters "+ 
 				String.join(", ", KEY_SESSIONID_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
 				" to setup auth in tap.properties");
 		}
+		boolean allowAnonymous = (tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS) == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
+
 		try{
 			this.api = new JSONAPIClient(this.authURL, "POST");
 		} catch (Exception e){
@@ -143,6 +147,10 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	 * The authentication headers will be extracted from the request, which will be up to the servlet or frontend to append using any given method (e.g. cookies)
 	 *
 	 * The response body is expected to be a json object with a "allowedAccess"
+	 *
+	 * Expected JSON format: 
+	 * 	{"allowed_access":{"SCHEMA2":["table1","table2"],"SCHEMA1":["t1","t2","t3"]},"userid":"id1","username":"User1"}
+	 * 	{"allowed_access":{"SCHEMA2":["table1"],"SCHEMA3":["t1"]},"userid":"id2","username":"User2"}
 	 * 
 	 * @param urlInterpreter	The interpreter of the request URL.
 	 * @param request			The request.
@@ -159,7 +167,12 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         try{
         	String sessionToken = request.getHeader(this.sessionIDHeaderField);
         	if (sessionToken == null){
-        		throw new ServletException("Authentication header missing from request");
+        		if (allowAnonymous){
+        			// TODO: create headers to send to the API 
+        		} else{
+        			throw new ServletException("Authentication header missing from request");
+        		}
+        		
         	} 
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
         	authHeaders.put(this.sessionIDHeaderField, sessionToken);

@@ -37,7 +37,6 @@ import tap.metadata.TAPTable;
 import tap.resource.TAP;
 import tap.auth.AuthJobOwner;
 
-import uws.UWSToolBox;
 import uws.UWSException;
 import uws.service.log.UWSLog.LogLevel;
 import uws.UWSToolBox;
@@ -103,11 +102,12 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 			user = (AuthJobOwner) UWSToolBox.getUser(request, tap.getServiceConnection().getUserIdentifier());
 		}catch(UWSException ue){
 			this.tap.getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Can not identify the HTTP request user!", ue);
-			// TODO: errors if I uncomment this?
 			throw new IOException("Failure to resolve user from request: "+ue.getMessage());
+		} finally {
+			write(writer, user);
 		}
 		
-		write(writer, user);
+		
 		return false;
 	}
 
