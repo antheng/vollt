@@ -36,7 +36,6 @@ compileJava {
 test{
 	forkEvery = 1
 	include '**/Test*'
-	testLogging.showStandardStreams = true
 }
 
 sourceSets.main.java.srcDirs = ["src"]
