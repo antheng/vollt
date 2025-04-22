@@ -1,4 +1,4 @@
-package tap.metadata;
+package tap.auth;
 
 /*
  * This file is part of TAPLibrary.
