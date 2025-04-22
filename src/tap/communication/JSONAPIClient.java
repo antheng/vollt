@@ -23,7 +23,8 @@ import tap.TAPException;
 
 /**
  *
- * <p> Subclass of {@link APIClient} to handle JSON strings in the request and response bodies by converting them to <code>org.json.JSONObject</code> objects</p>
+ * <p> Subclass of {@link APIClient} to handle JSON strings in the request and response bodies by 
+ * converting them to <code>org.json.JSONObject</code> objects</p>
  * 
  * @author Anthony Heng (AAO)
  * @version 04/2025

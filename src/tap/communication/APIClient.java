@@ -41,19 +41,21 @@ import java.util.List;
 import tap.TAPException;
 
 /**
- * <p>Provides an generic abstract class for acting as a client for an API. Inherit to handle different payload and response data formats</p>
+ * <p>Provides an generic abstract class for acting as a client for an API. Inherit to handle 
+ * different payload and response data formats</p>
  * 
  * <p>
  * This class serves as a base class for handling API requests and their responses.
- * This inital class defines an existing method for sending data via GET or POST request, and provides default
- * default behaviour for communicating data to and from an API (conversion to byte, assumed to get String response).
+ * This inital class defines an existing method for sending data via GET or POST request, and 
+ * provides default default behaviour for communicating data to and from an API (conversion to byte,
+ * assumed to get String response).
  * </p>
  *
  *
  * <p>
- * When extending this class, it is expected the subclass will have a specific data structure/class in mind, with it's own conversion
- * to bytecode and parsing method from String. Thus this class provides abstract functions convertToString and convertFromString to define
- * these behaviours. 
+ * When extending this class, it is expected the subclass will have a specific data structure/class 
+ * in mind, with it's own conversion to String and parsing method from String. Thus this class 
+ * provides abstract functions convertToString and convertFromString to define these behaviours. 
  * 
  * Existing classes are included for handling common data formats, including {@link JSONAPIClient} and {@link DefaultAPIClient}
  * </p>

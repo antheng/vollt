@@ -22,17 +22,11 @@ package tap.metadata;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletRequest;
 import java.lang.UnsupportedOperationException;
-import java.util.HashMap;
 import uk.ac.starlink.votable.VOSerializer;
 
 import tap.metadata.TAPSchema;
 import tap.resource.TAPResource;
-import tap.TAPException;
 import tap.metadata.TAPTable;
 import tap.resource.TAP;
 import tap.auth.AuthJobOwner;
@@ -47,13 +41,14 @@ import uws.UWSToolBox;
  * Authenticated replacement for {@link TAPMetadata}. Used to replace the /tables endpoint
  * </p>
  * <p>
- * The main difference is this on request, the request will be resolved to a {@link AuthJobOwner}, and
- * the xml return data will only include tables allowed by the user. 
+ * The main difference is this on request, the request will be resolved to a {@link AuthJobOwner}, 
+ * and the xml return data will only include tables allowed by the user. 
  * </p>
  *
  * <p>
- * Previous write methods write and writeSchema that do not have a {@link AuthJobOwner} parameter and would previously write all tables in the 
- * database, are made unsupported, and will throw an error if they are called.
+ * Previous write methods write and writeSchema that do not have a {@link AuthJobOwner} parameter 
+ * and would previously write all tables in the database, are made unsupported, and will throw an 
+ * error if they are called.
  * </p>
  *
  * @author Anthony Heng (AAO)
@@ -63,11 +58,13 @@ import uws.UWSToolBox;
  */
 public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 
-	/** Resource name of the TAP metadata. This name is also used - in this class - in the TAP URL to identify this resource.
+	/** Resource name of the TAP metadata. This name is also used - in this class - in the TAP URL 
+	 * to identify this resource.
 	 * Here it corresponds to the following URI: ".../tables". 
 	 * 
-	 * NOTE: As a big chunk of vollt still relies on TAPMetadata, authentication will also be needed elsewhere in the code to ensure users can not query
-	 * tables they do not have access to. This is just to replace the endpoint /tables.
+	 * NOTE: As a big chunk of vollt still relies on TAPMetadata, authentication will also be needed
+	 * elsewhere in the code to ensure users can not query tables they do not have access to. This 
+	 * is just to replace the endpoint /tables.
 	 *       
 	 * */
 	

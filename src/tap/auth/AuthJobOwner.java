@@ -32,7 +32,6 @@ import tap.TAPJob;
 import tap.parameters.TAPParameters;
 import tap.metadata.TAPTable;
 import tap.metadata.TAPSchema;
-import tap.config.ConfigurableTAPFactory;
 
 import uws.job.user.JobOwner;
 import uws.job.UWSJob;
@@ -40,12 +39,15 @@ import uws.job.JobList;
 import uws.job.user.DefaultJobOwner;
 
 /**
- * <p>A Job Owner who represents an authenticated user and has restricted access to specific components/tables of the TAP service. To be constructed by {@link tap.auth.ConfigurableAuthUserIdentifier}</p>
+ * <p>A Job Owner who represents an authenticated user and has restricted access to specific 
+ * components/tables of the TAP service. 
+ * To be constructed by {@link tap.auth.ConfigurableAuthUserIdentifier}</p>
  *
- * <p>For now the main thing restricted between users is private datasets. This class will store the information regarding what tables are allowed them.</p>
+ * <p>For now the main thing restricted between users is private datasets. This class will store the 
+ * information regarding what tables are allowed them.</p>
  *
- * <p>Inherits many methods from {@link DefaultJobOwner}, such as the various getters and checks on if a user can read/write a given job, as the requirements for
- * those remain the same. </p>
+ * <p>Inherits many methods from {@link DefaultJobOwner}, such as the various getters and checks on 
+ * if a user can read/write a given job, as the requirements for those remain the same. </p>
  * 
  * @author Anthony Heng (AAO)
  * @version 04/2025
@@ -63,7 +65,8 @@ public class AuthJobOwner extends DefaultJobOwner {
 	 * Its pseudo will also be equal to the given ID.
 	 * 
 	 * @param name	ID/Pseudo of the Job Owner to create.
-	 * @param allowedDataList List of allowed data this jobowner is allowed to access, laid out like a list of Schemas
+	 * @param allowedDataList List of allowed data this jobowner is allowed to access, laid out like
+	 * a list of Schemas
 	 */
 	public AuthJobOwner(final String name, List<TAPSchema> allowedDataList){
 		this(name, name, allowedDataList);
@@ -102,8 +105,8 @@ public class AuthJobOwner extends DefaultJobOwner {
 	/**
 	 * {@inheritDoc}
 	 * 
-	 * For authenticated job owners, a job can be executed if the owner owns the job, and the resources (e.g. tables, schemas) they 
-	 * are trying to access are allowed by them.  
+	 * For authenticated job owners, a job can be executed if the owner owns the job, and the 
+	 * resources (e.g. tables, schemas) they are trying to access are allowed by them.  
 	 */
 	@Override
 	public boolean hasExecutePermission(UWSJob job) {
@@ -173,7 +176,8 @@ public class AuthJobOwner extends DefaultJobOwner {
 
 
 	/**
-	 * Checks if table <code>t</code> is accessible by the user. The table must have both a matching schema and matching name within the user's list of allowed data.
+	 * Checks if table <code>t</code> is accessible by the user. The table must have both a matching 
+	 * schema and matching name within the user's list of allowed data.
 	 * @param  t  table to check
 	 * 
 	 * @return true or false if the user has access to table t
