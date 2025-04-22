@@ -70,7 +70,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
 	/* API SETUP KEYS */
 	/* Property name used to set the request header field name of the session */
-	public final static String KEY_SESSIONID_HEADER_FIELD = "auth_header_field";
+	public final static String KEY_AUTH_HEADER_FIELD = "auth_header_field";
 	/* Property name used to set the url used for authentication */
 	public final static String KEY_AUTH_URL_FIELD = "session_authentication_url";
 	/* Property name used to set the name of the key in the authentication URL response, which stores the user's ID*/
@@ -87,7 +87,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
 	/* Field in the request header that contains the session ID, sent to authURL for verification. Changed in tap.properties under 
 	 * session_authentication_url*/
-	private String sessionIDHeaderField;
+	private String authHeaderField;
 
 	/* APIClient used for communication with the authentication API which we will send authentication tokens to*/
 	private APIClient api;
@@ -120,19 +120,20 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	 * 
 	 */
 	public ConfigurableAuthUserIdentifier(final Properties tapConfig) throws UWSException{
-		this.sessionIDHeaderField = tapConfig.getProperty(KEY_SESSIONID_HEADER_FIELD); 
+		this.authHeaderField = tapConfig.getProperty(KEY_AUTH_HEADER_FIELD); 
 		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
 		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
 		this.responseAllowedDataField = tapConfig.getProperty(KEY_RESP_ALLOWED_ACCESS_FIELD);
 		// if any of the required fields are missing, throw IllegalArgumentException
-		if (this.sessionIDHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
+		if (this.authHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
 			this.responsedPseudoField == null || this.responseAllowedDataField == null){ 
 			throw new UWSException("Missing parameters "+ 
-				String.join(", ", KEY_SESSIONID_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
+				String.join(", ", KEY_AUTH_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
 				" to setup auth in tap.properties");
 		}
-		boolean allowAnonymous = (tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS) == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
+		String propValue = tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS);
+		boolean allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
 
 		try{
 			this.api = new JSONAPIClient(this.authURL, "POST");
@@ -165,17 +166,13 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	public AuthJobOwner extractUserId(UWSUrl urlInterpreter, HttpServletRequest request) throws UWSException {
         JSONObject jsonResponse;
         try{
-        	String sessionToken = request.getHeader(this.sessionIDHeaderField);
-        	if (sessionToken == null){
-        		if (allowAnonymous){
-        			// TODO: create headers to send to the API 
-        		} else{
-        			throw new ServletException("Authentication header missing from request");
-        		}
-        		
+        	String sessionToken = request.getHeader(this.authHeaderField);
+        	if (sessionToken == null && !allowAnonymous){
+        		// This service won't accept a missing auth header, throw error. 
+        		throw new ServletException(this.authHeaderField+" header missing from request");
         	} 
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
-        	authHeaders.put(this.sessionIDHeaderField, sessionToken);
+        	authHeaders.put(this.authHeaderField, sessionToken);
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
         } catch (Exception e) {
 			throw new UWSException(e);
