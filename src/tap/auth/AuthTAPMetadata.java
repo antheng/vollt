@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.UnsupportedOperationException;
 import uk.ac.starlink.votable.VOSerializer;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest;
 
 import tap.metadata.TAPSchema;
 import tap.resource.TAPResource;

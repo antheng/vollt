@@ -31,7 +31,6 @@ import javax.servlet.http.HttpServletRequest;
 import tap.ServiceConnection;
 import tap.TAPException;
 import tap.TAPJob;
-import tap.auth.AuthJobOwner;
 import uws.UWSException;
 import uws.UWSToolBox;
 import uws.job.parameters.InputParamController;
@@ -78,7 +77,7 @@ public class TAPParameters extends UWSParameters {
 		// If given a request and service, and the ServiceConnection has a useridentifier, it can be used to authorize a user
 		if (service.getUserIdentifier() != null) {
 			try {
-				this.owner = (AuthJobOwner) UWSToolBox.getUser(request, service.getUserIdentifier());
+				this.owner = UWSToolBox.getUser(request, service.getUserIdentifier());
 			} catch (UWSException e) {
 				throw new TAPException(e);
 			}
@@ -104,7 +103,7 @@ public class TAPParameters extends UWSParameters {
 		// If given a request and service, and the ServiceConnection has a useridentifier, it can be used to authorize a user
 		if (service.getUserIdentifier() != null) {
 			try {
-				this.owner = (AuthJobOwner) UWSToolBox.getUser(request, service.getUserIdentifier());
+				this.owner = UWSToolBox.getUser(request, service.getUserIdentifier());
 			} catch (UWSException e) {
 				throw new TAPException(e);
 			}
