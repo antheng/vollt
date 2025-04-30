@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import tap.metadata.TAPSchema;
 import tap.resource.TAPResource;
 import tap.metadata.TAPTable;
+import tap.metadata.TAPMetadata;
 import tap.resource.TAP;
 import tap.auth.AuthJobOwner;
 
