@@ -77,7 +77,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 		// Load Schemas into the linked list
 		allowedData = new LinkedHashMap<String, TAPSchema>();
 		for (TAPSchema schemaEntry : allowedDataList){
-			allowedData.put(schemaEntry.getADQLName(), schemaEntry);
+			allowedData.put(schemaEntry.getRawName(), schemaEntry);
 		}
 
 	}
@@ -146,7 +146,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 	        DBChecker allowedTableChecker = new DBChecker(allowedTables);
 	        // Build ADQL Parser with new checker
 	        ADQLParser adqlParse = new ADQLParser(allowedTableChecker);
-	        // Parse the query from the request   
+	        // Parse the query from the request
 	        String queryString = tapParams.getQuery();
 
 	        // Parse the query for the sake of getting checked by allowedTableChecker. 
@@ -179,7 +179,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 	 * Checks if table <code>t</code> is accessible by the user. The table must have both a matching 
 	 * schema and matching name within the user's list of allowed data.
 	 * @param  t  table to check
-	 * 
+	 *
 	 * @return true or false if the user has access to table t
 	 */
 	public boolean canAccessTable(TAPTable t){
@@ -187,27 +187,24 @@ public class AuthJobOwner extends DefaultJobOwner {
 		// Find the schema of the table, ensure get table does not return null
 		// if (t == null)
 		// 	return false;
-		
 		TAPSchema searchSchema = allowedData.get(t.getSchema().getADQLName());
 		if (searchSchema != null){ // schema found
 			// Search for the table within the schema
-			TAPTable searchTable = searchSchema.getTable(t.getADQLName()); 
+			TAPTable searchTable = searchSchema.getTable(t.getADQLName());
 			if (searchTable != null) // Final null check. If fails then will move out and return false
 				return (searchTable.getFullName().equals(t.getFullName())); // Check name match
-		} 
-		
+		}
 		return false; // All if checks failed. Schema not found, cannot access
 	}
 
 	/**
 	 * Checks if Schema <code>s</code> is accessible by the user. It should be if the schema is in the user's list of allowed data
 	 * @param  s  schema to check
-	 * 
+	 *
 	 * @return true or false if the user has access to the schema
 	 */
 	public boolean canAccessSchema(TAPSchema s){
-		return (allowedData.get(s.getADQLName()) != null);
+		return (allowedData.get(s.getRawName()) != null);
 	}
 
-	
 }

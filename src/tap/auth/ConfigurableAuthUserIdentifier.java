@@ -193,7 +193,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
         	authHeaders.put(this.authHeaderField, sessionToken);
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
-        } catch (Exception e) {
+        } catch (ServletException e){
+			throw new UWSException(401, e); // The servletexception above got thrown, send a 401 Unauthorized
+		} catch (Exception e) {
 			throw new UWSException(e);
 		}
         
@@ -207,15 +209,15 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         for (String schemaName : accessjson.keySet()){ 
         	TAPSchema schemaToAdd = new TAPSchema(schemaName);
         	JSONArray tableNamesArr = accessjson.getJSONArray(schemaName);
-        	for (int i = 0; i<tableNamesArr.length(); i++)
-	            schemaToAdd.addTable(tableNamesArr.getString(i));
+        	for (int i = 0; i<tableNamesArr.length(); i++){
+        		// System.out.println("adding to allowed table: " + tableNamesArr.getString(i));
+	            schemaToAdd.addTable(schemaName+"."+tableNamesArr.getString(i));
+	        }
 	        allowedDataFromAPI.add(schemaToAdd);
-
         }
-        
-        // Loop over json array of tables. Extract Object and convert to string to build a new TAPSchema
         permissions.put("allowedData", allowedDataFromAPI);
 
+        // Loop over json array of tables. Extract Object and convert to string to build a new TAPSchema
         return restoreUser(jsonResponse.getString(this.responseUserIDField), 
         	jsonResponse.getString(this.responsedPseudoField), permissions);
 	}
