@@ -162,7 +162,6 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 		for(TAPSchema s : schemas.values()) {
 			this.logger.logTAP(LogLevel.INFO, null, "WRITE_SCHEMA", "Schema: "+s.getRawName(), null);
 			if (user.canAccessSchema(s)){
-				System.out.println("user: "+user.getPseudo());
 				writeSchema(s, writer, user);
 			}
 		}

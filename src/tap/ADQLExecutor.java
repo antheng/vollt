@@ -385,7 +385,6 @@ public class ADQLExecutor {
 			// Only needed for authenticated users
 			if (tapParams.getOwner() instanceof AuthJobOwner){
 				AuthJobOwner authOwner = (AuthJobOwner) tapParams.getOwner();
-				System.out.println("Checking Authentication details");
 				// Check if the user is even allowed to run the job
 				try{
 					if (!authOwner.TAPParamsAllowed(tapParams)) {
@@ -814,7 +813,7 @@ public class ADQLExecutor {
 		boolean tableNameConstrained = false;
 		boolean tableKeysConstrained = false;
 		for (ADQLTable queriedTable : query.getFrom().getTables()){
-			if (queriedTable.getSchemaName() == "TAP_SCHEMA"){
+			if (queriedTable.getSchemaName().equals("TAP_SCHEMA")){
 				// Filter TAP_SCHEMA
 				switch(queriedTable.getTableName()) {
 					case "schemas":
