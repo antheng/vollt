@@ -1013,8 +1013,8 @@ public class TAP implements VOSIResource {
 			// Identify the user:
 			try{
 				user = UWSToolBox.getUser(request, service.getUserIdentifier());
-			}catch(UWSException ue){
-				getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Can not identify the HTTP request user!", ue);
+			} catch(UWSException ue){
+				getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Error trying to identify the HTTP request user!", ue);
 				throw new TAPException(ue);
 			}
 

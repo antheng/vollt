@@ -154,7 +154,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		boolean allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
 
 		try{
-			this.api = new JSONAPIClient(this.authURL, "POST");
+			this.api = new JSONAPIClient(this.authURL, "GET");
 		} catch (Exception e){
 			throw new UWSException(e);
 		}
@@ -174,11 +174,11 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	 * 
 	 * @param urlInterpreter	The interpreter of the request URL.
 	 * @param request			The request.
-	 * 
+	 *
 	 * @return					The owner/user of a given session ID
-	 * 
+	 *
 	 * @throws UWSException		If any error occurs while extracting the user ID from the given parameters.
-	 * 
+	 *
 	 * @see UWSService#executeRequest(HttpServletRequest, HttpServletResponse)
 	 */
 	@Override
@@ -187,9 +187,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         try{
         	String sessionToken = request.getHeader(this.authHeaderField);
         	if (sessionToken == null && !allowAnonymous){
-        		// This service won't accept a missing auth header, throw error. 
+        		// This service won't accept a missing auth header, throw error.
         		throw new ServletException(this.authHeaderField+" header missing from request");
-        	} 
+        	}
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
         	authHeaders.put(this.authHeaderField, sessionToken);
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
@@ -198,15 +198,15 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		} catch (Exception e) {
 			throw new UWSException(e);
 		}
-        
+
         HashMap<String, Object> permissions = new HashMap<>();
         // Add allowed access information
         ArrayList<TAPSchema> allowedDataFromAPI = new ArrayList<TAPSchema>();
-        
+
         // Assumed: array of schema json objects
         JSONObject accessjson = jsonResponse.getJSONObject(this.responseAllowedDataField);
         // Contained object is a struct of schemas, which are keys to table lists. See doc for an example.
-        for (String schemaName : accessjson.keySet()){ 
+        for (String schemaName : accessjson.keySet()){
         	TAPSchema schemaToAdd = new TAPSchema(schemaName);
         	JSONArray tableNamesArr = accessjson.getJSONArray(schemaName);
         	for (int i = 0; i<tableNamesArr.length(); i++){
@@ -218,7 +218,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         permissions.put("allowedData", allowedDataFromAPI);
 
         // Loop over json array of tables. Extract Object and convert to string to build a new TAPSchema
-        return restoreUser(jsonResponse.getString(this.responseUserIDField), 
+        return restoreUser(jsonResponse.getString(this.responseUserIDField),
         	jsonResponse.getString(this.responsedPseudoField), permissions);
 	}
 

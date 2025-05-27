@@ -96,11 +96,14 @@ public class AuthJobOwner extends DefaultJobOwner {
 	 * Authenticated Job Owners only have write permissions to a job list if they own a job in the list
 	 * @see uws.job.user.JobOwner#hasWritePermission(uws.job.JobList)
 	 */
-	@Override
-	public boolean hasWritePermission(JobList jl){
-		// TODO: Any way to restrict job lists to one per user?
-		return jl.getNbJobs(this)>0;
-	}
+	// TODO: If this is uncommented then the user doesn't have any way to enter any batch jobs
+	// 		 At least the user can't read other jobs? Theres probably a better way to 
+	// 		 restrict users to joblists anyway.
+	// @Override
+	// public boolean hasWritePermission(JobList jl){
+	// 	// TODO: Any way to restrict job lists to one per user?
+	// 	return jl.getNbJobs(this)>0;
+	// }
 
 	/**
 	 * {@inheritDoc}
@@ -115,7 +118,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 
 		if (job instanceof TAPJob){
 			try {
-				boolean tapJobAllowed = checkTAPJobAllowed((TAPJob) job);
+				boolean tapJobAllowed = TAPParamsAllowed(((TAPJob) job).getTapParams());
 				return (nullCheck||isOwner) && tapJobAllowed; 
 			} catch (ParseException e){
 				// Cannot run this job due to malformed query
@@ -134,9 +137,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 	 *
 	 * @throws ParseException If the query is malformed
 	 */
-	private boolean checkTAPJobAllowed(TAPJob job) throws ParseException {
-		TAPParameters tapParams = job.getTapParams();
-		// If TAPJob is allowed
+	public boolean TAPParamsAllowed(TAPParameters tapParams) throws ParseException {
 		if (tapParams.getRequest().equals(TAPJob.REQUEST_DO_QUERY)){
 			// Build collection of TAPTables
 	        ArrayList<TAPTable> allowedTables = new ArrayList<>();
@@ -176,17 +177,16 @@ public class AuthJobOwner extends DefaultJobOwner {
 
 
 	/**
-	 * Checks if table <code>t</code> is accessible by the user. The table must have both a matching 
+	 * Checks if table <code>t</code> is accessible by the user. The table must have both a matching
 	 * schema and matching name within the user's list of allowed data.
 	 * @param  t  table to check
 	 *
 	 * @return true or false if the user has access to table t
 	 */
 	public boolean canAccessTable(TAPTable t){
-		// System.out.println("Looking for table "+t.getFullName());
 		// Find the schema of the table, ensure get table does not return null
-		// if (t == null)
-		// 	return false;
+		if (t == null)
+			return false;
 		TAPSchema searchSchema = allowedData.get(t.getSchema().getADQLName());
 		if (searchSchema != null){ // schema found
 			// Search for the table within the schema

@@ -384,8 +384,25 @@ public class ADQLExecutor {
 
 			// Only needed for authenticated users
 			if (tapParams.getOwner() instanceof AuthJobOwner){
+				AuthJobOwner authOwner = (AuthJobOwner) tapParams.getOwner();
+				System.out.println("Checking Authentication details");
+				// Check if the user is even allowed to run the job
+				try{
+					if (!authOwner.TAPParamsAllowed(tapParams)) {
+						// Pretend it doesn't exist, no sir
+						if (report.synchronous)
+							throw new TAPException("Querying inaccessible resource: " + tapParams.getQuery(), null, UWSException.BAD_REQUEST, tapParams.getQuery(), progression);
+						else
+							throw new UWSException(UWSException.BAD_REQUEST, null, "Querying inaccessible resource: " + tapParams.getQuery());
+					}
+				} catch(ParseException pe) {
+					if (report.synchronous)
+						throw new TAPException("Incorrect ADQL query: " + pe.getMessage(), pe, UWSException.BAD_REQUEST, tapParams.getQuery(), progression);
+					else
+						throw new UWSException(UWSException.BAD_REQUEST, pe, "Incorrect ADQL query: " + pe.getMessage());
+				}
 				// Rebuild the adqlQuery with constraints
-				addTAPSchemaFilter(adqlQuery, (AuthJobOwner) tapParams.getOwner()); // Add TAP_SCHEMA contraints
+				addTAPSchemaFilter(adqlQuery, authOwner); // Add TAP_SCHEMA contraints
 			}
 
 			if (thread.isInterrupted())
