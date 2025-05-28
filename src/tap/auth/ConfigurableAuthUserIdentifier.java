@@ -92,6 +92,26 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* Allow anonymous user generation. Still needs to be handled on the backend */
 	public final static String KEY_RESP_ALLOW_ANONYMOUS = "anonymous_user_support";
 
+	/**
+	 * Key in the tap.properties file to define the authentication scheme.
+	 */
+	public final static String KEY_AUTH_SCHEME = "auth_scheme";
+
+	/**
+	 * Key in the tap.properties file to define the authentication realm.
+	 */
+	public final static String KEY_AUTH_REALM = "auth_realm";
+	/**
+	 * Auth scheme to send back with www-authenticate on a 401 response. Defaults to Basic but can 
+	 * be set in tap.properties using the key defined by AUTH_TYPE_KEY
+	 * 
+	 * NOTE: If using a scheme that requires more than a realm property then you may need to inherit this
+	 * UserIdentifier, overriding the behaviour for sending back a 401 www-authenticate header.
+	 */
+	protected String authScheme;
+	protected String authRealm;
+
+
 	/* URL to send authentication requests to verify token. Changed in tap.properties under 
 	sessionid_header_field */
 	private String authURL; 
@@ -143,6 +163,8 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
 		this.responseAllowedDataField = tapConfig.getProperty(KEY_RESP_ALLOWED_ACCESS_FIELD);
+		this.authScheme = tapConfig.getProperty(KEY_AUTH_SCHEME);
+		this.authRealm = tapConfig.getProperty(KEY_AUTH_REALM);
 		// if any of the required fields are missing, throw IllegalArgumentException
 		if (this.authHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
 			this.responsedPseudoField == null || this.responseAllowedDataField == null){ 
@@ -194,7 +216,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	authHeaders.put(this.authHeaderField, sessionToken);
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
         } catch (ServletException e){
-			throw new UWSException(401, e); // The servletexception above got thrown, send a 401 Unauthorized
+			throw new UWSException(401, e, authSchemeExceptionMessage(e)); // The servletexception above got thrown, send a 401 Unauthorized
 		} catch (Exception e) {
 			throw new UWSException(e);
 		}
@@ -226,6 +248,23 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	public AuthJobOwner restoreUser(String id, String pseudo, Map<String, Object> otherData) {
 		return new AuthJobOwner(id, pseudo, (List<TAPSchema>) otherData.get("allowedData"));
 	}
-	
+
+	/* Generates a exception message specifically for 401 requests, appending the www-authentication header
+	 * details for tap.TAP to add to the response headers
+	 *
+	 * @param Exception e	The originating exception caused by not having an authentication header
+	 *
+	 * @return				Exception message to an unauthenticated user, with the www-authenticate details to send back
+	 */
+	protected String authSchemeExceptionMessage(Exception e){
+		String message = e.getMessage();
+		if (this.authScheme != null){
+			message+= " : WWW-Authenticate="+this.authScheme;
+			if (this.authRealm != null){
+				message+=" realm=\""+this.authRealm+"\"";
+			}
+		}
+		return message;
+	}
 }
 

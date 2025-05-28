@@ -142,17 +142,6 @@ public class TAP implements VOSIResource {
 	 * @since 2.0 */
 	public final static String RESOURCE_SYNC = "sync";
 
-	/**
-	 * Key in the tap.properties file to define the authentication type.
-	 */
-	private final static String AUTH_TYPE_KEY = "auth_scheme";
-
-	/**
-	 * Auth scheme to send back with www-authenticate on a 401 response. Defaults to Basic but can 
-	 * be set in tap.properties using the key defined by AUTH_TYPE_KEY
-	 */
-	private String authScheme = "Basic";
-
 	/** Description of the TAP service owning this resource. */
 	protected final ServiceConnection service;
 
@@ -1014,8 +1003,17 @@ public class TAP implements VOSIResource {
 			try{
 				user = UWSToolBox.getUser(request, service.getUserIdentifier());
 			} catch(UWSException ue){
-				getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Error trying to identify the HTTP request user!", ue);
-				throw new TAPException(ue);
+				if (ue.getHttpErrorCode() == 401){
+					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+					// ue.getMessage() will be like: Authorization header missing from request : WWW-Authenticate=Bearer realm="vollt authentication"
+					String authHeaderValue = ue.getMessage().split("WWW-Authenticate=")[1].trim();
+					response.setHeader("WWW-Authenticate", authHeaderValue);
+					getLogger().logTAP(LogLevel.INFO, null, "IDENT_USER", "Auth header not present when required, sending 401", ue);
+					return; // Finish here
+				} else{
+					getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Error trying to identify the HTTP request user!", ue);
+					throw new TAPException(ue);
+				}
 			}
 
 			// Set the character encoding:
@@ -1066,11 +1064,6 @@ public class TAP implements VOSIResource {
 			getLogger().logHttp(LogLevel.INFO, response, reqID, user, "HTTP request aborted or connection with the client closed => the TAP resource \"" + resourceName + "\" has stopped and the body of the HTTP response can not have been partially or completely written!", null);
 
 		}catch(TAPException te){
-			// CASE: for a resource that requires an authorization header and doesn't get one will require to send a Unauthorized response with a www-authenticate header
-			if (te.getHttpErrorCode() == 401){
-				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-				response.setHeader("WWW-Authenticate", authScheme+" realm=\"vollt authentication\"");
-			} else {
 				/*
 				 *   Any known/"expected" TAP exception is logged but also returned to the HTTP client in an XML error document.
 				 *   Since the error is known, it is supposed to have already been logged with a full stack trace. Thus, there
@@ -1080,7 +1073,7 @@ public class TAP implements VOSIResource {
 				errorWriter.writeError(te, response, request, reqID, user, resourceName);
 				// Log the error:
 				getLogger().logHttp(LogLevel.ERROR, response, reqID, user, "TAP resource \"" + resourceName + "\" execution FAILED with the error: \"" + te.getMessage() + "\"!", null);
-			}
+
 
 		}catch(IllegalStateException ise){
 			/*
