@@ -41,6 +41,7 @@ import tap.log.TAPLog;
 import tap.metadata.TAPMetadata;
 import tap.metadata.TAPSchema;
 import tap.metadata.TAPTable;
+import tap.auth.ConfigurableAuthUserIdentifier;
 import uk.ac.starlink.votable.VOSerializer;
 import uws.UWSException;
 import uws.UWSToolBox;
@@ -1002,12 +1003,17 @@ public class TAP implements VOSIResource {
 			// Identify the user:
 			try{
 				user = UWSToolBox.getUser(request, service.getUserIdentifier());
+				 // If user is anonymous, hasn't thrown a 401, then allow_anonymous is true.
+				 // Allow access anonymously but add the WWW-Authenticate header. Continue as normal
+				if (user==null && (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier)) {
+					ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
+					response.setHeader("WWW-Authenticate", authUserIdentifier.getWWWAuthenticate());
+				}
 			} catch(UWSException ue){
-				if (ue.getHttpErrorCode() == 401){
+				if (ue.getHttpErrorCode() == 401 && (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier)){
+					ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
 					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-					// ue.getMessage() will be like: Authorization header missing from request : WWW-Authenticate=Bearer realm="vollt authentication"
-					String authHeaderValue = ue.getMessage().split("WWW-Authenticate=")[1].trim();
-					response.setHeader("WWW-Authenticate", authHeaderValue);
+					response.setHeader("WWW-Authenticate", authUserIdentifier.getWWWAuthenticate());
 					getLogger().logTAP(LogLevel.INFO, null, "IDENT_USER", "Auth header not present when required, sending 401", ue);
 					return; // Finish here
 				} else{

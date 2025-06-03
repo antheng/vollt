@@ -216,7 +216,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	authHeaders.put(this.authHeaderField, sessionToken);
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
         } catch (ServletException e){
-			throw new UWSException(401, e, authSchemeExceptionMessage(e)); // The servletexception above got thrown, send a 401 Unauthorized
+			throw new UWSException(401, e); // The servletexception above got thrown, send a 401 Unauthorized
 		} catch (Exception e) {
 			throw new UWSException(e);
 		}
@@ -249,22 +249,19 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		return new AuthJobOwner(id, pseudo, (List<TAPSchema>) otherData.get("allowedData"));
 	}
 
-	/* Generates a exception message specifically for 401 requests, appending the www-authentication header
-	 * details for tap.TAP to add to the response headers
+	/* WWW-Authenticate header to insert into the response if the TAP header in the case anonymous access
+	 * if performed while this is being used as the UserIdentifier. public to be accessible by the TAP service
 	 *
 	 * @param Exception e	The originating exception caused by not having an authentication header
 	 *
 	 * @return				Exception message to an unauthenticated user, with the www-authenticate details to send back
 	 */
-	protected String authSchemeExceptionMessage(Exception e){
-		String message = e.getMessage();
-		if (this.authScheme != null){
-			message+= " : WWW-Authenticate="+this.authScheme;
-			if (this.authRealm != null){
-				message+=" realm=\""+this.authRealm+"\"";
-			}
+	public String getWWWAuthenticate(){
+		String wwwAuthenticateHeader = this.authScheme;
+		if (this.authRealm != null){
+			wwwAuthenticateHeader+=" realm=\""+this.authRealm+"\"";
 		}
-		return message;
+		return wwwAuthenticateHeader;
 	}
 }
 
