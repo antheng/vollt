@@ -389,10 +389,11 @@ public class ADQLExecutor {
 				try{
 					if (!authOwner.TAPParamsAllowed(tapParams)) {
 						// Pretend it doesn't exist, no sir
+						logger.logTAP(LogLevel.INFO, report, "EXEC", "Attempt to access inaccessible resource: "+tapParams.getQuery(), null);
 						if (report.synchronous)
-							throw new TAPException("Querying inaccessible resource: " + tapParams.getQuery(), null, UWSException.BAD_REQUEST, tapParams.getQuery(), progression);
+							throw new TAPException("Incorrect ADQL query: " + pe.getMessage(), pe, UWSException.BAD_REQUEST, tapParams.getQuery(), progression);
 						else
-							throw new UWSException(UWSException.BAD_REQUEST, null, "Querying inaccessible resource: " + tapParams.getQuery());
+							throw new UWSException(UWSException.BAD_REQUEST, pe, "Incorrect ADQL query: " + pe.getMessage());
 					}
 				} catch(ParseException pe) {
 					if (report.synchronous)
