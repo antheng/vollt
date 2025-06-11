@@ -808,6 +808,10 @@ public class ADQLExecutor {
 		boolean tableNameConstrained = false;
 		boolean tableKeysConstrained = false;
 		for (ADQLTable queriedTable : query.getFrom().getTables()){
+			if (queriedTable.getSchemaName() == null){
+				// The table doesn't have a schema, won't have TAP_SCHEMA in the first place
+				return;
+			}
 			if (queriedTable.getSchemaName().equals("TAP_SCHEMA")){
 				// Filter TAP_SCHEMA
 				switch(queriedTable.getTableName()) {
