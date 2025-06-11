@@ -118,7 +118,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 
 		if (job instanceof TAPJob){
 			try {
-				boolean tapJobAllowed = TAPParamsAllowed(((TAPJob) job).getTapParams());
+				boolean tapJobAllowed = TAPParamsAllowed(((TAPJob) job).getTapParams(), false);
 				return (nullCheck||isOwner) && tapJobAllowed; 
 			} catch (ParseException e){
 				// Cannot run this job due to malformed query
@@ -133,11 +133,12 @@ public class AuthJobOwner extends DefaultJobOwner {
 	/**
 	 * Checks if a given TAPJob is allowed to be run by the owner. Authenticated users will be allowed to 
 	 * @param  job TAPJob to check against
+	 * @param  throwParseException true to throw a parse exception, then insead of false throw a ParseException
 	 * @return     <code>true</code> if the this JobOwner meets all requirements for running the job <code>false</code> otherwise.
 	 *
 	 * @throws ParseException If the query is malformed
 	 */
-	public boolean TAPParamsAllowed(TAPParameters tapParams) throws ParseException {
+	public boolean TAPParamsAllowed(TAPParameters tapParams, boolean throwParseException) throws ParseException {
 		if (tapParams.getRequest().equals(TAPJob.REQUEST_DO_QUERY)){
 			// Build collection of TAPTables
 	        ArrayList<TAPTable> allowedTables = new ArrayList<>();
@@ -156,11 +157,19 @@ public class AuthJobOwner extends DefaultJobOwner {
 	        	adqlParse.parseQuery(queryString);
 	        } catch(UnresolvedTableException ute){
 	        	// If a parse runs into this exception, then it is not on the list of allowed tables. Return false
-	        	return false;
+	        	if (throwParseException){
+	        		throw new ParseException(ute.getMessage());
+	        	} else{
+		        	return false;
+		        }
 	        } catch(UnresolvedIdentifiersException e){
 	        	// This is also a possibility for not being on the list of allowed tables: 
 	        	// if the parse does not find the table, unknown tables are reported as "Unknown table". in a UnresolvedIdentifiersException.
-	        	return false;
+	        	if (throwParseException){
+	        		throw new ParseException(e.getMessage());
+	        	} else{
+		        	return false;
+		        }
 	        }
 	        // parsed without any issues from the DBChecker, continue on to return true
 	    }

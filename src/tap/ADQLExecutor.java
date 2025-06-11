@@ -387,14 +387,8 @@ public class ADQLExecutor {
 				AuthJobOwner authOwner = (AuthJobOwner) tapParams.getOwner();
 				// Check if the user is even allowed to run the job
 				try{
-					if (!authOwner.TAPParamsAllowed(tapParams)) {
-						// Pretend it doesn't exist, no sir
-						logger.logTAP(LogLevel.INFO, report, "EXEC", "Attempt to access inaccessible resource: "+tapParams.getQuery(), null);
-						if (report.synchronous)
-							throw new TAPException("Incorrect ADQL query: " + pe.getMessage(), pe, UWSException.BAD_REQUEST, tapParams.getQuery(), progression);
-						else
-							throw new UWSException(UWSException.BAD_REQUEST, pe, "Incorrect ADQL query: " + pe.getMessage());
-					}
+					// See if it completes without an exception
+					authOwner.TAPParamsAllowed(tapParams, true);
 				} catch(ParseException pe) {
 					if (report.synchronous)
 						throw new TAPException("Incorrect ADQL query: " + pe.getMessage(), pe, UWSException.BAD_REQUEST, tapParams.getQuery(), progression);
