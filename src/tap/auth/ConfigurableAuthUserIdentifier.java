@@ -214,7 +214,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         JSONObject jsonResponse;
         try{
         	String sessionToken = request.getHeader(this.authHeaderField);
-        	if (sessionToken == null && !allowAnonymous){
+        	if (sessionToken == null && !this.allowAnonymous){
         		// This service won't accept a missing auth header, throw error.
         		throw new ServletException(this.authHeaderField+" header missing from request");
         	}
