@@ -42,7 +42,7 @@ public class JSONAPIClient extends APIClient<JSONObject> {
 	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET" 
 	 */
 	public JSONAPIClient(String urlString, String requestMethod,  int timeoutDuration, String payloadEncoding) throws TAPException{
-		super(urlString, requestMethod, payloadEncoding);
+		super(urlString, requestMethod, timeoutDuration, payloadEncoding);
 	}
 
 	/**
