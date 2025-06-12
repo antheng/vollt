@@ -36,11 +36,12 @@ public class JSONAPIClient extends APIClient<JSONObject> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
-	 *
+	 * @param  timeoutDuration In milliseconds, how long this client should wait before timing out with an API
+	 * 
 	 * @throws TAPException If the URL is malformed
 	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET" 
 	 */
-	public JSONAPIClient(String urlString, String requestMethod, String payloadEncoding) throws TAPException{
+	public JSONAPIClient(String urlString, String requestMethod,  int timeoutDuration, String payloadEncoding) throws TAPException{
 		super(urlString, requestMethod, payloadEncoding);
 	}
 
@@ -48,13 +49,13 @@ public class JSONAPIClient extends APIClient<JSONObject> {
 	 * Create a APIClient for a given URL, what kind of requests to send
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
-	 * @param  stringEncoding  Encoding used for payloads
+	 * @param  timeoutDuration In milliseconds, how long this client should wait before timing out with an API
 	 *
 	 * @throws TAPException If the URL is malformed
 	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public JSONAPIClient(String urlString, String requestMethod) throws TAPException{
-		super(urlString, requestMethod);
+	public JSONAPIClient(String urlString, String requestMethod, int timeoutDuration) throws TAPException{
+		super(urlString, requestMethod, timeoutDuration);
 	}
 
 	@Override

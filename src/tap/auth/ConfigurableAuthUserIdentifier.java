@@ -92,6 +92,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* Allow anonymous user generation. Still needs to be handled on the backend */
 	public final static String KEY_RESP_ALLOW_ANONYMOUS = "anonymous_user_support";
 
+	/* Property name used to set timeout limit in millseconds when communicating with the auth url*/
+	public final static String KEY_API_TIMEOUT = "auth_timeout";
+
 	/**
 	 * Key in the tap.properties file to define the authentication scheme.
 	 */
@@ -114,7 +117,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
 	/* URL to send authentication requests to verify token. Changed in tap.properties under 
 	sessionid_header_field */
-	private String authURL; 
+	private String authURL;
 
 	/* Field in the request header that contains the session ID, sent to authURL for verification. 
 	Changed in tap.properties under session_authentication_url*/
@@ -172,11 +175,14 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 				String.join(", ", KEY_AUTH_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
 				" to setup auth in tap.properties");
 		}
+
 		String propValue = tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS);
 		boolean allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
+		String propValue = tapConfig.getProperty(KEY_API_TIMEOUT);
+		int apiTimeout = (propValue == null) ? 5000 : Integer.parseInteger(propValue); //set timeout to 5 seconds as default
 
 		try{
-			this.api = new JSONAPIClient(this.authURL, "GET");
+			this.api = new JSONAPIClient(this.authURL, "GET", apiTimeout);
 		} catch (Exception e){
 			throw new UWSException(e);
 		}

@@ -93,6 +93,9 @@ public abstract class APIClient<T> {
 	 * the Constructor*/
 	protected String requestMethod;
 
+	/** In milliseconds the amount of time this client will wait for an API before timing out **/
+	protected int timeoutDuration;
+
 
 	/* ************ */
 	/* CONSTRUCTORS */
@@ -107,8 +110,8 @@ public abstract class APIClient<T> {
 	 * @throws TAPException If the URL is malformed
 	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public APIClient(String urlString, String requestMethod, String stringEncoding) throws TAPException, IllegalArgumentException {
-		this(urlString, requestMethod);
+	public APIClient(String urlString, String requestMethod, int timeoutDuration, String stringEncoding) throws TAPException, IllegalArgumentException {
+		this(urlString, requestMethod, timeoutDuration);
 		this.stringEncoding = stringEncoding;
 	}
 
@@ -117,11 +120,12 @@ public abstract class APIClient<T> {
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
 	 * @param  stringEncoding  Encoding used for payloads
+	 * @param  timeoutDuration In milliseconds, how long this client should wait before timing out with an API
 	 *
 	 * @throws TAPException If the URL is malformed
 	 * @throws IllegalArgumentException If <code>requestMethod</code> is not "POST" or "GET"
 	 */
-	public APIClient(String urlString, String requestMethod) throws TAPException, IllegalArgumentException {
+	public APIClient(String urlString, String requestMethod, int timeoutDuration) throws TAPException, IllegalArgumentException {
 		try{
 			this.url = new URI(urlString).toURL();
 		} catch (URISyntaxException e){
@@ -136,6 +140,7 @@ public abstract class APIClient<T> {
 		} else{
 			throw new IllegalArgumentException("requestMethod must be either \"POST\" or \"GET\"");
 		}
+		this.timeoutDuration = timeoutDuration;
 	}
 
 	/**
@@ -231,7 +236,7 @@ public abstract class APIClient<T> {
 	        conn.setRequestMethod(this.requestMethod);
 
 
-			conn.setConnectTimeout(5000); //set timeout to 5 seconds TODO: Set this in constructor
+			conn.setConnectTimeout(this.timeoutDuration);
 
 			//Transform payload to encoding
 
