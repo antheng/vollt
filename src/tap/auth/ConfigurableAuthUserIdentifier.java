@@ -255,19 +255,28 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		return new AuthJobOwner(id, pseudo, (List<TAPSchema>) otherData.get("allowedData"));
 	}
 
-	/* WWW-Authenticate header to insert into the response if the TAP header in the case anonymous access
+	/** 
+	 * WWW-Authenticate header to insert into the response if the TAP header in the case anonymous access
 	 * if performed while this is being used as the UserIdentifier. public to be accessible by the TAP service
 	 *
-	 * @param Exception e	The originating exception caused by not having an authentication header
-	 *
-	 * @return				Exception message to an unauthenticated user, with the www-authenticate details to send back
-	 */
+	 * @return				The www-authenticate details to send back
+	 **/
 	public String getWWWAuthenticate(){
 		String wwwAuthenticateHeader = this.authScheme;
 		if (this.authRealm != null){
 			wwwAuthenticateHeader+=" realm=\""+this.authRealm+"\"";
 		}
 		return wwwAuthenticateHeader;
+	}
+
+	/** 
+	 * Get the header field name for extracting the session. Used if we want to check it's value
+	 * in a request or the abscence of such. 
+	 *
+	 * @return The authentication header field name used to extract the session token
+	 **/
+	public String getAuthHeaderField(){
+		return this.authHeaderField;
 	}
 }
 

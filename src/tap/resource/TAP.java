@@ -1000,20 +1000,23 @@ public class TAP implements VOSIResource {
 
 		JobOwner user = null;
 		try{
+			// Check if the auth header is there to verify. If not add the WWW-Authenticate header
+			if (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier){
+				ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
+				if (request.getHeader(authUserIdentifier.getAuthHeaderField()) == null) {
+					// Pre-emptively add the WWW-Authenticate header as the auth header is not there.
+					// Will be used even if the user details succeed if this service allows anonymous
+					response.setHeader("WWW-Authenticate", authUserIdentifier.getWWWAuthenticate());
+				}
+			}
 			// Identify the user:
 			try{
 				user = UWSToolBox.getUser(request, service.getUserIdentifier());
 				 // If user is anonymous, hasn't thrown a 401, then allow_anonymous is true.
-				 // Allow access anonymously but add the WWW-Authenticate header. Continue as normal
-				if (user==null && (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier)) {
-					ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
-					response.setHeader("WWW-Authenticate", authUserIdentifier.getWWWAuthenticate());
-				}
+				 // Allow access anonymously with the anonymous user response provided by the API
 			} catch(UWSException ue){
 				if (ue.getHttpErrorCode() == 401 && (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier)){
-					ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
 					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-					response.setHeader("WWW-Authenticate", authUserIdentifier.getWWWAuthenticate());
 					getLogger().logTAP(LogLevel.INFO, null, "IDENT_USER", "Auth header not present when required, sending 401", ue);
 					return; // Finish here
 				} else{
