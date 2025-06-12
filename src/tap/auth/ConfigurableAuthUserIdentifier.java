@@ -177,9 +177,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		}
 
 		String propValue = tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS);
-		boolean allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
+		this.allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
 		propValue = tapConfig.getProperty(KEY_API_TIMEOUT);
-		int apiTimeout = (propValue == null) ? 5000 : Integer.parseInt(propValue); //set timeout to 5 seconds as default
+		this.apiTimeout = (propValue == null) ? 5000 : Integer.parseInt(propValue); //set timeout to 5 seconds as default
 
 		try{
 			this.api = new JSONAPIClient(this.authURL, "GET", apiTimeout);
