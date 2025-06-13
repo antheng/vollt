@@ -25,7 +25,6 @@ import uws.service.UserIdentifier;
 import uws.job.user.JobOwner;
 import javax.servlet.http.HttpServletRequest;
 
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -68,17 +67,16 @@ public class TestAuth {
 	private static HttpServer server;
 	private static JSONAPIClient client;
 	private static InetSocketAddress serverAddress;
-
+	// Mock server details
 	private static int TEST_SERVER_PORT_DEFAULT = 8090;
 	private static String LOCAL_TEST_AUTH_SERVER_IP = "127.0.0.1"; // localhost a example server
-
 	private static int usePort;
 
+	// Test schemas
 	private static TAPSchema schema1 = new TAPSchema("SCHEMA1");
 	private static TAPSchema schema2 = new TAPSchema("SCHEMA2");
 	private static TAPSchema schema2_fuller = new TAPSchema("SCHEMA2");
 	private static TAPSchema schema3 = new TAPSchema("SCHEMA3");
-	
 
 	private final static Properties getConfigurableAuthTestProperties(String endpoint){
 		Properties validProp = new Properties();
@@ -89,7 +87,7 @@ public class TestAuth {
 		validProp.setProperty("response_allowed_access_field", "allowed_access");
 		return validProp;
 	}
-	
+
 	@BeforeClass
 	public static void setUp() throws Exception {
 
@@ -102,7 +100,7 @@ public class TestAuth {
         server = HttpServer.create(serverAddress, 0);
         // Start the server
         server.setExecutor(null); // Use the default executor
-        server.start();	    
+        server.start();
 
         // Load up test schemas
         schema1.addTable("t1");
@@ -127,13 +125,11 @@ public class TestAuth {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-
 		server.stop(5);
-		
 	}
 	/**
-	 * Basic test first to ensure the user identifier and the AuthJobOwner classes work correctly without a remote connection, 
-	 * and all checks work. 
+	 * Basic test first to ensure the user identifier and the AuthJobOwner classes work correctly without a remote connection,
+	 * and all checks work.
 	 */
 	@Test
 	public void testUserIdentifierAuthJobOwner() throws Exception {
@@ -141,20 +137,17 @@ public class TestAuth {
 		ConfigurableAuthUserIdentifier authUserIdentifier = new ConfigurableAuthUserIdentifier(getConfigurableAuthTestProperties("/auth"));
 		HashMap<String, Object> userInfo = new HashMap<>();
 		// Setup schemas and tables
-		
 		List<TAPSchema> schemasAllowed = Arrays.asList(schema1, schema2);
-
 		userInfo.put("allowedData", schemasAllowed);
 
 		AuthJobOwner jobOwner = (AuthJobOwner) authUserIdentifier.restoreUser("001", "tapuser001", userInfo);
 		// Now time to run some checks
-
 		// Test schema access
 		assertTrue(jobOwner.canAccessSchema(schema1));
 		assertTrue(jobOwner.canAccessSchema(schema2));
 		assertFalse(jobOwner.canAccessSchema(schema3));
 
-		// A jobowner can access the table if theres a match in the list. The fullname used in the ADQL queries		
+		// A jobowner can access the table if theres a match in the list. The fullname used in the ADQL queries
 		assertTrue(jobOwner.canAccessTable(schema1.getTable("t1")));
 		assertTrue(jobOwner.canAccessTable(schema1.getTable("t2")));
 		assertTrue(jobOwner.canAccessTable(schema1.getTable("t3")));
@@ -171,7 +164,6 @@ public class TestAuth {
 		// Check allowed tap jobs
 		TAPJob testJob = new TAPJob((JobOwner) jobOwner, testTapParams);// todo create ADQL query example
 
-
 		assertFalse(jobOwner.hasExecutePermission(testJob));
 
 		try{
@@ -181,30 +173,24 @@ public class TestAuth {
 		}
 		// Check allowed tap jobs
 		testJob = new TAPJob((JobOwner) jobOwner, testTapParams);// todo create ADQL query example
-
-
 		assertTrue(jobOwner.hasExecutePermission(testJob));
 
+		// Check allowed tap jobs
 		try{
 			testTapParams = buildTAPParameters("SELECT * FROM SCHEMA1.t1, SCHEMA2.table2;");
 		} catch (TAPException te){
 			fail("Failed to build test tap parameters: "+ te.getMessage());
 		}
-		// Check allowed tap jobs
 		testJob = new TAPJob((JobOwner) jobOwner, testTapParams);// todo create ADQL query example
-
-
 		assertFalse(jobOwner.hasExecutePermission(testJob));
-
 	}
 
 	@Test
-
 	/**
  	 * Test the ability for ConfigurableAuthUserIdentifier to correctly load properties, and communicate with
  	 * a external server to obtain user information with a given authorisation key.
  	 *
- 	 * Ensure all user information including allowed table access permissions is correct. 
+ 	 * Ensure all user information including allowed table access permissions is correct.
 	 */
 	public void testUserIdentifierAPI() throws Exception {
 		// Create auth contexts
@@ -220,7 +206,7 @@ public class TestAuth {
 		AuthJobOwner jobOwner = useridentifier.extractUserId(null, mockRequest);
 		assertEquals("id1", jobOwner.getID());
 		assertEquals("User1", jobOwner.getPseudo());
-		// Check schemas		
+		// Check schemas
 		assertTrue(jobOwner.canAccessSchema(schema1));
 		assertTrue(jobOwner.canAccessSchema(schema2_fuller));
 		assertFalse(jobOwner.canAccessSchema(schema3));
@@ -238,7 +224,7 @@ public class TestAuth {
 		jobOwner = useridentifier.extractUserId(null, mockRequest);
 		assertEquals("id2", jobOwner.getID());
 		assertEquals("User2", jobOwner.getPseudo());
-		// Check schemas	
+		// Check schemas
 		assertFalse(jobOwner.canAccessSchema(schema1));
 		assertTrue(jobOwner.canAccessSchema(schema2_fuller)); // has same name as schema2
 		assertTrue(jobOwner.canAccessSchema(schema3));
@@ -247,8 +233,6 @@ public class TestAuth {
 		assertFalse(jobOwner.canAccessTable(schema2_fuller.getTable("table2"))); // However schema2 does not contain table2
 		assertTrue(jobOwner.canAccessTable(schema3.getTable("t1")));
 	}
-
-
 
 	public static final String getPertinentMessage(final Exception ex){
 		return (ex.getCause() == null || ex.getMessage().equals(ex.getCause().getMessage())) ? ex.getMessage() : ex.getCause().getMessage();
@@ -268,7 +252,7 @@ public class TestAuth {
 
 	public class AuthHttpHandler implements HttpHandler {
 			HashMap<String, UserDetailsContainer> sessContainer = new HashMap<>();
-        	
+
         	public AuthHttpHandler(){
         		sessContainer.put("IZ1J08K5Vwzu9J3StE33R6zELhswmyZkE2MMb0pLtec3dwl0IjPPdx189Z1IV7DK",
         			new UserDetailsContainer("id1", "User1", Arrays.asList(schema1, schema2_fuller))
@@ -281,23 +265,20 @@ public class TestAuth {
         	private class UserDetailsContainer {
 			    private String userId;
 			    private String username;
-			    private List<TAPSchema> allowedData; 
+			    private List<TAPSchema> allowedData;
 
 			    public UserDetailsContainer(String userId, String username, List<TAPSchema> allowedData){
 			        this.userId = userId;
 			        this.username = username;
 			        this.allowedData = allowedData;
 			    }
-
 			    // Getters
 			    public String getUserId(){
 			        return userId;
 			    }
-
 			    public String getUsername(){
 			        return username;
 			    }
-
 			    public Map<String,List<String>> allowedDataAsMap(){
 			    	Map<String,List<String>> allowedDataMap = new HashMap<>();
 			    	for (TAPSchema userSchema : this.allowedData){
@@ -309,8 +290,6 @@ public class TestAuth {
 			    	}
 			    	return allowedDataMap;
 			    }
-
-			    
 			}
 
 			@Override
@@ -322,7 +301,6 @@ public class TestAuth {
 		   		exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
 
 				UserDetailsContainer userDetails = sessContainer.get(token);
-
 				JSONObject responseJson = new JSONObject();
 				responseJson.put("userid", userDetails.getUserId());
 				responseJson.put("username", userDetails.getUsername());
@@ -342,5 +320,4 @@ public class TestAuth {
 				}
 			}
 		}
-
 }

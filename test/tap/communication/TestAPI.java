@@ -1,4 +1,5 @@
 package tap.config;
+import tap.communication.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -6,14 +7,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import tap.communication.*;
-
-import javax.servlet.http.HttpServletRequest;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import javax.servlet.http.HttpServletRequest;
 
 // Java Program to Set up a Basic HTTP Server
 import com.sun.net.httpserver.HttpServer;
@@ -44,14 +42,12 @@ import org.json.JSONException;
 public class TestAPI {
 	private static HttpServer server;
 	private static InetSocketAddress serverAddress;
-
+	// Test server details
 	private static int TEST_SERVER_PORT_DEFAULT = 8090;
-
 	private static int usePort;
-	
+
 	@BeforeClass
 	public static void setUp() throws Exception {
-
 		usePort = TEST_SERVER_PORT_DEFAULT;
 		while(!portAvailable(usePort)){
 			usePort++; // Keep moving up ports until we find one we can use
@@ -79,9 +75,7 @@ public class TestAPI {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-
 		server.stop(5);
-		
 	}
 
 	/**
@@ -118,13 +112,12 @@ public class TestAPI {
 		} finally {
 			assertEquals("TestResponse",serverResponse);
 		}
-		
 	}
 
 	/**
 	 * Test sending POST request with body data. Response is just expected to mirror back the body
 	 */
-	@Test 
+	@Test
 	public void testDefaultAPIStrPost() throws Exception {
 		// Test sending text: The text send should be mirrored back
 		String endpoint = "/strMirror";
@@ -140,7 +133,7 @@ public class TestAPI {
 		        String line;
 		        while ((line = br.readLine()) != null){
 		            sb.append(line);
-		        }	
+		        }
 		        br.close();
 		        String response = sb.toString();
 
@@ -167,13 +160,12 @@ public class TestAPI {
 		} finally {
 			assertEquals(requestBody, serverResponse);
 		}
-		
 	}
 
 	/**
 	 * Test sending POST request with header data. Response is expected to extract these headers and form a response.
 	 */
-	@Test 
+	@Test
 	public void testDefaultAPIStrHeaders() throws Exception {
 		// Testing str with headers
 		String endpoint = "/strheader";
@@ -183,7 +175,6 @@ public class TestAPI {
 		headers.put("foo", "bar");
 		headers.put("vollt", "tap");
 
-
 		server.createContext(endpoint, new HttpHandler(){
 		   public void handle(HttpExchange exchange) throws IOException {
 		   		Headers headers = exchange.getRequestHeaders();
@@ -191,7 +182,7 @@ public class TestAPI {
 
 	            InputStreamReader reader = new InputStreamReader(exchange.getRequestBody(), "UTF-8");
 
-		   		StringBuilder sb = new StringBuilder(); 
+		   		StringBuilder sb = new StringBuilder();
 		   		if (headers.containsKey("foo")){
 		   			sb.append("foo="+headers.getFirst("foo"));
 		   		}
@@ -269,11 +260,10 @@ public class TestAPI {
 		} finally {
 			assertEquals("{\"JSON\":\"Hello, World!\"}", serverResponse.toString());
 		}
-		
 	}
 
 	/**
-	 * Test sending a POST request, with both the server and client handling JSON data. APIClient should automatically format into a JSONObject. 
+	 * Test sending a POST request, with both the server and client handling JSON data. APIClient should automatically format into a JSONObject.
 	 *
 	 * Response is used to form the test response.
 	 */
@@ -291,12 +281,11 @@ public class TestAPI {
 		        String line;
 		        while ((line = br.readLine()) != null){
 		            sb.append(line);
-		        }	
+		        }
 		        br.close();
 		        String requestText = sb.toString();
 		   		JSONObject requestJson = new JSONObject(); // Just initialize to fix later
 		   		JSONObject responseJson = new JSONObject(); // Just initialize to fix later
-
 		   		try{
 		       		requestJson = new JSONObject(requestText);
          		} catch (JSONException je){
@@ -306,7 +295,6 @@ public class TestAPI {
          		}
 
          		String response = responseJson.toString();
-
 	            exchange.sendResponseHeaders(200, response.length());
 	           	OutputStream os = exchange.getResponseBody();
 	            DataOutputStream outStream = new DataOutputStream(os);
@@ -331,11 +319,9 @@ public class TestAPI {
 		} finally {
 			assertEquals("{\"answer\":\"tap\"}", serverResponse.toString());
 		}
-		
 	}
 
 	public static final String getPertinentMessage(final Exception ex){
 		return (ex.getCause() == null || ex.getMessage().equals(ex.getCause().getMessage())) ? ex.getMessage() : ex.getCause().getMessage();
 	}
-
 }
