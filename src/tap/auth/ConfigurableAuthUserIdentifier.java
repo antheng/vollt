@@ -1,20 +1,20 @@
 package tap.auth;
 /*
  * This file is part of UWSLibrary.
- * 
+ *
  * UWSLibrary is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * UWSLibrary is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright 2012 - UDS/Centre de Données astronomiques de Strasbourg (CDS)
  */
 import java.util.Properties;
@@ -40,17 +40,17 @@ import uws.job.user.JobOwner;
 import uws.UWSException;
 
 /**
- * <p>A {@link UserIdentifier} implementation for handling authenticated users. Needs to be setup in 
- * the tap.properties file the expected request header and response field names attached to their 
+ * <p>A {@link UserIdentifier} implementation for handling authenticated users. Needs to be setup in
+ * the tap.properties file the expected request header and response field names attached to their
  * purpose.</p>
  *
- * <p>Authenticated users at the moment are only identified using a authentication header in the 
- * request. It is expected there to be another endpoint to provide these sessions and a custom TAP 
+ * <p>Authenticated users at the moment are only identified using a authentication header in the
+ * request. It is expected there to be another endpoint to provide these sessions and a custom TAP
  * servlet to add the authentication header using the developer's own choice of method</p>
  *
- * <p>The session header will be sent to a given authentication URL, and the response is expected to 
- * send back all relevant details needed to build a {@link AuthJobOwner} object. 
- * The keys used to store the session in the request, the authentication API details and the keys 
+ * <p>The session header will be sent to a given authentication URL, and the response is expected to
+ * send back all relevant details needed to build a {@link AuthJobOwner} object.
+ * The keys used to store the session in the request, the authentication API details and the keys
  * storing the user details in the response, all will be set within the tap.properties file </p>
  *
  * <p>The following properties need to be set to use this class
@@ -63,10 +63,10 @@ import uws.UWSException;
  * </ul>
  * </p>
  *
- * <p>With all required properties set, this class should either be initialised in the tap servlet 
- * or set as the <i>user_identifier</i> in the tap.properties file i.e. 
+ * <p>With all required properties set, this class should either be initialised in the tap servlet
+ * or set as the <i>user_identifier</i> in the tap.properties file i.e.
  * <code>user_identifier = tap.auth.ConfigurableUserIdentifier</code></p>
- * 
+ *
  * @author Anthony Heng (AAO)
  * @version 04/2025
  *
@@ -80,13 +80,13 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	public final static String KEY_AUTH_HEADER_FIELD = "auth_header_field";
 	/* Property name used to set the url used for authentication */
 	public final static String KEY_AUTH_URL_FIELD = "session_authentication_url";
-	/* Property name used to set the name of the key in the authentication URL response, which 
+	/* Property name used to set the name of the key in the authentication URL response, which
 	stores the user's ID*/
 	public final static String KEY_RESP_SESSIONID_FIELD = "response_id_field";
-	/* Property name used to set the name of the key in the authentication URL response, which 
+	/* Property name used to set the name of the key in the authentication URL response, which
 	stores the username*/
 	public final static String KEY_RESP_PSEUDO_FIELD = "response_pseudo_field";
-	/* Property name used to set the name of the key in the authentication URL response, which 
+	/* Property name used to set the name of the key in the authentication URL response, which
 	stores the list of allowed schemas and tables by the user*/
 	public final static String KEY_RESP_ALLOWED_ACCESS_FIELD = "response_allowed_access_field";
 	/* Allow anonymous user generation. Still needs to be handled on the backend */
@@ -105,9 +105,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	 */
 	public final static String KEY_AUTH_REALM = "auth_realm";
 	/**
-	 * Auth scheme to send back with www-authenticate on a 401 response. Defaults to Basic but can 
+	 * Auth scheme to send back with www-authenticate on a 401 response. Defaults to Basic but can
 	 * be set in tap.properties using the key defined by AUTH_TYPE_KEY
-	 * 
+	 *
 	 * NOTE: If using a scheme that requires more than a realm property then you may need to inherit this
 	 * UserIdentifier, overriding the behaviour for sending back a 401 www-authenticate header.
 	 */
@@ -115,53 +115,53 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	protected String authRealm;
 
 
-	/* URL to send authentication requests to verify token. Changed in tap.properties under 
+	/* URL to send authentication requests to verify token. Changed in tap.properties under
 	sessionid_header_field */
 	private String authURL;
 
-	/* Field in the request header that contains the session ID, sent to authURL for verification. 
+	/* Field in the request header that contains the session ID, sent to authURL for verification.
 	Changed in tap.properties under session_authentication_url*/
 	private String authHeaderField;
 
-	/* APIClient used for communication with the authentication API which we will send 
+	/* APIClient used for communication with the authentication API which we will send
 	authentication tokens to*/
 	private APIClient api;
 
-	/* From the API response the field name of the User ID. Can be changed in tap.properties under 
+	/* From the API response the field name of the User ID. Can be changed in tap.properties under
 	response_id_field */
-	private String responseUserIDField; 
+	private String responseUserIDField;
 
-	/* From the API response the field name of the username. Can be changed in tap.properties under 
+	/* From the API response the field name of the username. Can be changed in tap.properties under
 	response_pseudo_field */
-	private String responsedPseudoField; 
+	private String responsedPseudoField;
 
-	/* From the API response the field name of the list of allowed schemas and tables the user can 
+	/* From the API response the field name of the list of allowed schemas and tables the user can
 	access. Can be changed in tap.properties under response_tables_field */
 	private String responseAllowedDataField;
 
-	/* Whether to allow the initialisation of an "anonymous" userid. This relies on the 
-	Authentication API to respond back with anonymous user details if not given an authentication 
+	/* Whether to allow the initialisation of an "anonymous" userid. This relies on the
+	Authentication API to respond back with anonymous user details if not given an authentication
 	header with a POST request */
 	private boolean allowAnonymous;
 
 
 	/**
-	 * <p>Builds the authenticated API thanks to a given TAP configuration file. The configuration 
-	 * file is used to configure the 
+	 * <p>Builds the authenticated API thanks to a given TAP configuration file. The configuration
+	 * file is used to configure the
 	 * expected headers for sessions and the authentication API</p>
-	 * 
-	 * <p>This method should either be called during the custom servlet initialisation or if using 
-	 * {@link ConfigurableTapServlet}, set as the <i>user_identifier</i> in the tap.properties file 
+	 *
+	 * <p>This method should either be called during the custom servlet initialisation or if using
+	 * {@link ConfigurableTapServlet}, set as the <i>user_identifier</i> in the tap.properties file
 	 * i.e. <code>user_identifier = tap.auth.ConfigurableUserIdentifier</code></p>
-	 * 
+	 *
 	 * @param tapConfig	The content of the TAP configuration file.
-	 * 
-	 * @throws UWSException		If any required fields are missing in the tap.properties file, or 
+	 *
+	 * @throws UWSException		If any required fields are missing in the tap.properties file, or
 	 * any errors occur trying to initialize the API client
-	 * 
+	 *
 	 */
 	public ConfigurableAuthUserIdentifier(final Properties tapConfig) throws UWSException{
-		this.authHeaderField = tapConfig.getProperty(KEY_AUTH_HEADER_FIELD); 
+		this.authHeaderField = tapConfig.getProperty(KEY_AUTH_HEADER_FIELD);
 		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
 		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
@@ -169,15 +169,15 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		this.authScheme = tapConfig.getProperty(KEY_AUTH_SCHEME);
 		this.authRealm = tapConfig.getProperty(KEY_AUTH_REALM);
 		// if any of the required fields are missing, throw IllegalArgumentException
-		if (this.authHeaderField == null || this.authURL == null || this.responseUserIDField == null || 
-			this.responsedPseudoField == null || this.responseAllowedDataField == null){ 
-			throw new UWSException("Missing parameters "+ 
+		if (this.authHeaderField == null || this.authURL == null || this.responseUserIDField == null ||
+			this.responsedPseudoField == null || this.responseAllowedDataField == null){
+			throw new UWSException("Missing parameters "+
 				String.join(", ", KEY_AUTH_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
 				" to setup auth in tap.properties");
 		}
 
 		String propValue = tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS);
-		this.allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous 
+		this.allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous
 		propValue = tapConfig.getProperty(KEY_API_TIMEOUT);
 		int apiTimeout = (propValue == null) ? 5000 : Integer.parseInt(propValue); //set timeout to 5 seconds as default
 
@@ -191,15 +191,15 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/**
 	 * {@inheritDoc}
 	 *
-	 * The authentication headers will be extracted from the request, which will be up to the servlet 
+	 * The authentication headers will be extracted from the request, which will be up to the servlet
 	 * or frontend to append using any given method (e.g. cookies)
 	 *
 	 * The response body is expected to be a json object with a "allowedAccess"
 	 *
-	 * Expected JSON format: 
+	 * Expected JSON format:
 	 * 	{"allowed_access":{"SCHEMA2":["table1","table2"],"SCHEMA1":["t1","t2","t3"]},"userid":"id1","username":"User1"}
 	 * 	{"allowed_access":{"SCHEMA2":["table1"],"SCHEMA3":["t1"]},"userid":"id2","username":"User2"}
-	 * 
+	 *
 	 * @param urlInterpreter	The interpreter of the request URL.
 	 * @param request			The request.
 	 *
@@ -255,7 +255,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		return new AuthJobOwner(id, pseudo, (List<TAPSchema>) otherData.get("allowedData"));
 	}
 
-	/** 
+	/**
 	 * WWW-Authenticate header to insert into the response if the TAP header in the case anonymous access
 	 * if performed while this is being used as the UserIdentifier. public to be accessible by the TAP service
 	 *
@@ -269,9 +269,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		return wwwAuthenticateHeader;
 	}
 
-	/** 
+	/**
 	 * Get the header field name for extracting the session. Used if we want to check it's value
-	 * in a request or the abscence of such. 
+	 * in a request or the abscence of such.
 	 *
 	 * @return The authentication header field name used to extract the session token
 	 **/

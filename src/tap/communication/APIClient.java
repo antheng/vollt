@@ -41,26 +41,26 @@ import java.util.List;
 import tap.TAPException;
 
 /**
- * <p>Provides an generic abstract class for acting as a client for an API. Inherit to handle 
+ * <p>Provides an generic abstract class for acting as a client for an API. Inherit to handle
  * different payload and response data formats</p>
- * 
+ *
  * <p>
  * This class serves as a base class for handling API requests and their responses.
- * This inital class defines an existing method for sending data via GET or POST request, and 
+ * This inital class defines an existing method for sending data via GET or POST request, and
  * provides default default behaviour for communicating data to and from an API (conversion to byte,
  * assumed to get String response).
  * </p>
  *
  *
  * <p>
- * When extending this class, it is expected the subclass will have a specific data structure/class 
- * in mind, with it's own conversion to String and parsing method from String. Thus this class 
- * provides abstract functions convertToString and convertFromString to define these behaviours. 
- * 
+ * When extending this class, it is expected the subclass will have a specific data structure/class
+ * in mind, with it's own conversion to String and parsing method from String. Thus this class
+ * provides abstract functions convertToString and convertFromString to define these behaviours.
+ *
  * Existing classes are included for handling common data formats, including {@link JSONAPIClient} and {@link DefaultAPIClient}
  * </p>
- * 
- * 
+ *
+ *
  * @author Anthony Heng (AAO)
  * @version 04/2025
  */
@@ -85,11 +85,11 @@ public abstract class APIClient<T> {
 	/** URL to communicate with the API. To be set using a config file */
 	protected URL url;
 
-	/** Alternate payload encodings can be set in constructor, but utf-8 is 
+	/** Alternate payload encodings can be set in constructor, but utf-8 is
 	 * common enough to be a good default */
-	protected String stringEncoding = "UTF-8"; 
+	protected String stringEncoding = "UTF-8";
 
-	/** http request type (POST or GET). To be converted from string during 
+	/** http request type (POST or GET). To be converted from string during
 	 * the Constructor*/
 	protected String requestMethod;
 
@@ -101,7 +101,7 @@ public abstract class APIClient<T> {
 	/* CONSTRUCTORS */
 	/* ************ */
 	/**
-	 * Create a APIClient for a given URL, and what kind of requests to send, 
+	 * Create a APIClient for a given URL, and what kind of requests to send,
 	 * and the encoding used for payloads
 	 * @param  urlString     URL of the API to communicate with
 	 * @param  requestMethod Type of request to send. Either "POST" or "GET"
@@ -144,31 +144,29 @@ public abstract class APIClient<T> {
 	}
 
 	/**
-	 * Send the request only with no data. Useful for GET requests. 
+	 * Send the request only with no data. Useful for GET requests.
 	 * @return response as object T
 	 */
 	public T sendRequest() throws TAPException, IOException{
 		// Attach empty headers
 		Map<String, String> headers = Collections.<String, String>emptyMap();
 		return convertFromString(getStringResponse(headers, ""));
-
 	}
 
 
 	/**
-	 * Only send header data with request, without any payload 
+	 * Only send header data with request, without any payload
 	 * @param headers Header fields to send to the API URL
 	 * @return response as object T
 	 */
 	public T sendRequest(Map<String, String> headers) throws TAPException, IOException{
 		return convertFromString(getStringResponse(headers, ""));
-
 	}
-	
+
 	/**
 	 * Send a request only with a payload. The payload will be converted to a String to send through.
 	 * The payload will not have any effect if the request method is GET
-	 * 
+	 *
 	 * @param payload payload to send. Only for POST requests
 	 * @return response as an object of type T
 	 */
@@ -176,13 +174,12 @@ public abstract class APIClient<T> {
 		String payloadAsString = convertToString(payload);
 		Map<String, String> headers = Collections.<String, String>emptyMap();
 		return convertFromString(getStringResponse(headers, payloadAsString));
-
 	}
 
 	/**
 	 * Send a request with a payload. The payload will be converted to a String to send through.
 	 * The payload will not have any effect if the request method is GET
-	 * 
+	 *
 	 * @param headers Header fields to send to the API URL
 	 * @param payload payload to send. Only for POST requests
 	 * @return response as an object of type T
@@ -190,16 +187,13 @@ public abstract class APIClient<T> {
 	public T sendRequest(Map<String, String> headers, T payload) throws TAPException, IOException{
 		String payloadAsString = convertToString(payload);
 		return convertFromString(getStringResponse(headers, payloadAsString));
-
 	}
 
-
-
 	/**
-	 * Load the data from a given InputStream. Used by getStringResponse for loading the 
+	 * Load the data from a given InputStream. Used by getStringResponse for loading the
 	 * error or output streams of a given connection.
 	 * @param  inputStream input stream to read data from
-	 * @return Data read from the input stream 
+	 * @return Data read from the input stream
 	 */
 	private String readFromStream(InputStream inputStream, String streamEncoding) throws IOException{
 
@@ -213,25 +207,25 @@ public abstract class APIClient<T> {
             sb.append(line);
         }
         br.close();
-    
+
 		return sb.toString();
 
 	}
 
 	/**
-	 * Send data to api. Get response back in string form. 
+	 * Send data to api. Get response back in string form.
 	 * @param  headers    Header fields to send to the API URL
 	 * @param  payloadStr Payload in string format. Will have been converted from format T using convertFromString()
 	 * @return            Data from API based on request
 	 *
-	 * @throws IOException If the connection the API url fails. 
+	 * @throws IOException If the connection the API url fails.
 	 * @throws TAPException If the HTTP response is a non-successful one (>=200 and <300)
 	 */
 	protected String getStringResponse(Map<String, String> headers, String payloadStr) throws TAPException, IOException{
 			HttpURLConnection conn;
 			// Create URL object
         	conn = (HttpURLConnection) url.openConnection();
-        
+
 	        // Set request method
 	        conn.setRequestMethod(this.requestMethod);
 
@@ -241,9 +235,9 @@ public abstract class APIClient<T> {
 			//Transform payload to encoding
 
 	        // Add all headers to the request
-	        for (Map.Entry<String, String> entry : headers.entrySet()) 
+	        for (Map.Entry<String, String> entry : headers.entrySet())
             	conn.setRequestProperty(entry.getKey(), entry.getValue());
-            	
+
 	        if (this.requestMethod.equals("POST")){
 	        	conn.setDoOutput(true); // Enable writing output to the request
 	        	// Send payload
@@ -285,17 +279,16 @@ public abstract class APIClient<T> {
 	/* ******* */
 	/**
 	 * Get the request method used for API requests (either POST or GET)
-	 * 
+	 *
 	 * @return	The request method (either POST or GET)
 	 */
 	public String getRequestMethod(){
 		return requestMethod;
 	}
 
-
 	/**
 	 * Get the URL object for the API resource
-	 * 
+	 *
 	 * @return URL object for the API resource
 	 */
 	public URL getURL(){
@@ -304,11 +297,10 @@ public abstract class APIClient<T> {
 
 	/**
 	 * Get the text encoding for Strings, most often UTF-8
-	 * 
+	 *
 	 * @return name of the text encoding for both request and response bodies
 	 */
 	public String getStringEncoding(){
 		return this.stringEncoding;
 	}
-
 }

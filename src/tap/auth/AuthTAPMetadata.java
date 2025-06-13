@@ -113,10 +113,10 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 	/**
 	 * {@inheritDoc}
 	 * In AuthTAPMetadata this method is not supported and throws an {@link UnsupportedOperationException}.
-	 * 
+	 *
 	 * @throws UnsupportedOperationException if this method is called.
 	 */
-	@Override 
+	@Override
 	public void write(final PrintWriter writer) throws UnsupportedOperationException{
 		throw new UnsupportedOperationException("Attempted to access universal method of AuthTAPMetaData");
 	}
@@ -124,23 +124,21 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 	/**
 	 * {@inheritDoc}
 	 * In AuthTAPMetadata this method is not supported and throws an {@link UnsupportedOperationException}.
-	 * 
+	 *
 	 * @throws UnsupportedOperationException if this method is called.
 	 */
 
-	@Override 
+	@Override
 	protected void writeSchema(TAPSchema s, final PrintWriter writer) throws UnsupportedOperationException{
 		throw new UnsupportedOperationException("Attempted to access universal method of AuthTAPMetaData");
-		
 	}
 
 	// Use old method, however call writeSchema that filters out the tables the user can't access
-	
 	/**
 	 * Format in XML user-specific metadata set and write it in the given writer.
-	 * 
+	 *
 	 * @param writer	Stream in which the XML representation of this metadata must be written.
-	 * @param user      User in which to write the metadata for. 
+	 * @param user      User in which to write the metadata for.
 	 *
 	 * @throws IOException	If there is any error while writing the XML in the given writer.
 	 */
@@ -233,7 +231,6 @@ public class AuthTAPMetadata extends TAPMetadata implements TAPResource {
 		if (nbColumns > 0)
 			UWSToolBox.flush(writer);
 	}
-	
 }
 
 

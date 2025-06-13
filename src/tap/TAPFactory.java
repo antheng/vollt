@@ -505,5 +505,4 @@ public abstract class TAPFactory implements UWSFactory {
 	public ServiceConnection getServiceConnection() {
 		return this.service;
 	}
-
 }

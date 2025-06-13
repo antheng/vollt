@@ -875,6 +875,5 @@ public class ADQLExecutor {
 	  		valueConstraints[i] = new StringConstant(values.get(i));
 	  	}
 	  	return new In(new ADQLColumn(columnName), valueConstraints);
-
 	}
 }

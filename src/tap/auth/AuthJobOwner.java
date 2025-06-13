@@ -40,7 +40,7 @@ import uws.job.user.DefaultJobOwner;
 
 /**
  * <p>A Job Owner who represents an authenticated user and has restricted access to specific 
- * components/tables of the TAP service. 
+ * components/tables of the TAP service.
  * To be constructed by {@link tap.auth.ConfigurableAuthUserIdentifier}</p>
  *
  * <p>For now the main thing restricted between users is private datasets. This class will store the 
@@ -48,22 +48,22 @@ import uws.job.user.DefaultJobOwner;
  *
  * <p>Inherits many methods from {@link DefaultJobOwner}, such as the various getters and checks on 
  * if a user can read/write a given job, as the requirements for those remain the same. </p>
- * 
+ *
  * @author Anthony Heng (AAO)
  * @version 04/2025
- * 
+ *
  * @see uws.service.UserIdentifier
  * @see uws.job.user.JobOwner
  * @see uws.job.user.DefaultJobOwner;
  */
 public class AuthJobOwner extends DefaultJobOwner {
-	
-	protected LinkedHashMap<String, TAPSchema> allowedData; 
+
+	protected LinkedHashMap<String, TAPSchema> allowedData;
 
 	/**
 	 * Builds a Job Owner which has the given ID.
 	 * Its pseudo will also be equal to the given ID.
-	 * 
+	 *
 	 * @param name	ID/Pseudo of the Job Owner to create.
 	 * @param allowedDataList List of allowed data this jobowner is allowed to access, laid out like
 	 * a list of Schemas
@@ -107,9 +107,9 @@ public class AuthJobOwner extends DefaultJobOwner {
 
 	/**
 	 * {@inheritDoc}
-	 * 
-	 * For authenticated job owners, a job can be executed if the owner owns the job, and the 
-	 * resources (e.g. tables, schemas) they are trying to access are allowed by them.  
+	 *
+	 * For authenticated job owners, a job can be executed if the owner owns the job, and the
+	 * resources (e.g. tables, schemas) they are trying to access are allowed by them.
 	 */
 	@Override
 	public boolean hasExecutePermission(UWSJob job) {
@@ -119,19 +119,19 @@ public class AuthJobOwner extends DefaultJobOwner {
 		if (job instanceof TAPJob){
 			try {
 				boolean tapJobAllowed = TAPParamsAllowed(((TAPJob) job).getTapParams(), false);
-				return (nullCheck||isOwner) && tapJobAllowed; 
+				return (nullCheck||isOwner) && tapJobAllowed;
 			} catch (ParseException e){
 				// Cannot run this job due to malformed query
 				return true; // Let it run. It'll get caught further down the line during execution and produce an informative exception
 							 // Can't do it here as JobOwner.hasExecutePermission() does not normally throw checked exceptions
 			}
 		} else {
-			return (nullCheck||isOwner);  
+			return (nullCheck||isOwner);
 		}
 	}
 
 	/**
-	 * Checks if a given TAPJob is allowed to be run by the owner. Authenticated users will be allowed to 
+	 * Checks if a given TAPJob is allowed to be run by the owner. Authenticated users will be allowed to
 	 * @param  job TAPJob to check against
 	 * @param  throwParseException true to throw a parse exception, then insead of false throw a ParseException
 	 * @return     <code>true</code> if the this JobOwner meets all requirements for running the job <code>false</code> otherwise.
@@ -144,14 +144,14 @@ public class AuthJobOwner extends DefaultJobOwner {
 	        ArrayList<TAPTable> allowedTables = new ArrayList<>();
 	        for (TAPSchema userSchema : this.allowedData.values())
 	        	userSchema.forEach(allowedTables::add); // Add those tables to the array list of tables
-	        											// Note: this works as TAPSchemas implements Iterable<TAPTable> 
+	        											// Note: this works as TAPSchemas implements Iterable<TAPTable>
 	        DBChecker allowedTableChecker = new DBChecker(allowedTables);
 	        // Build ADQL Parser with new checker
 	        ADQLParser adqlParse = new ADQLParser(allowedTableChecker);
 	        // Parse the query from the request
 	        String queryString = tapParams.getQuery();
 
-	        // Parse the query for the sake of getting checked by allowedTableChecker. 
+	        // Parse the query for the sake of getting checked by allowedTableChecker.
 	        // No need to store the result as ADQLExecutor will do that later
 	        try{
 	        	adqlParse.parseQuery(queryString);
@@ -163,7 +163,7 @@ public class AuthJobOwner extends DefaultJobOwner {
 		        	return false;
 		        }
 	        } catch(UnresolvedIdentifiersException e){
-	        	// This is also a possibility for not being on the list of allowed tables: 
+	        	// This is also a possibility for not being on the list of allowed tables:
 	        	// if the parse does not find the table, unknown tables are reported as "Unknown table". in a UnresolvedIdentifiersException.
 	        	if (throwParseException){
 	        		throw new ParseException(e.getMessage());
@@ -215,5 +215,4 @@ public class AuthJobOwner extends DefaultJobOwner {
 	public boolean canAccessSchema(TAPSchema s){
 		return (allowedData.get(s.getRawName()) != null);
 	}
-
 }
