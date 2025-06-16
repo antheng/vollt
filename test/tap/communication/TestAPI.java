@@ -104,7 +104,7 @@ public class TestAPI {
 		// define a custom HttpHandler
 		try {
 			// Starting client
-			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "GET");
+			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "GET", 5000);
 			// Sending request
 			serverResponse = client.sendRequest();
 		} catch(Exception e){
@@ -151,7 +151,7 @@ public class TestAPI {
 		// Test sending text: The text send should be mirrored back
 		try {
 			// Starting client
-			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST");
+			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST", 5000);
 			// Sending request
 
 			serverResponse = client.sendRequest(requestBody);
@@ -213,7 +213,7 @@ public class TestAPI {
 
 		try {
 			// Starting client
-			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST");
+			DefaultAPIClient client = new DefaultAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST", 5000);
 			// Sending request
 			serverResponse = client.sendRequest(headers);
 		} catch(Exception e){
@@ -252,7 +252,7 @@ public class TestAPI {
 		// define a custom HttpHandler
 		try {
 			// Starting client
-			JSONAPIClient client = new JSONAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "GET");
+			JSONAPIClient client = new JSONAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "GET", 5000);
 			// Sending request
 			serverResponse = client.sendRequest();
 		} catch(Exception e){
@@ -311,7 +311,7 @@ public class TestAPI {
 		// define a custom HttpHandler
 		try {
 			// Starting client
-			JSONAPIClient client = new JSONAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST");
+			JSONAPIClient client = new JSONAPIClient("http://"+server.getAddress().getHostName()+":"+server.getAddress().getPort()+endpoint, "POST", 5000);
 			// Sending request
 			serverResponse = client.sendRequest(requestPayload);
 		} catch(Exception e){

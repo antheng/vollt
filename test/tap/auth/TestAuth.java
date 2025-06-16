@@ -85,6 +85,7 @@ public class TestAuth {
 		validProp.setProperty("response_id_field", "userid");
 		validProp.setProperty("response_pseudo_field", "username");
 		validProp.setProperty("response_allowed_access_field", "allowed_access");
+		validProp.setProperty("auth.schemes", "Basic, Bearer");
 		return validProp;
 	}
 

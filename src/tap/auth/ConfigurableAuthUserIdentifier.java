@@ -21,6 +21,7 @@ import java.util.Properties;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.ServletException;
@@ -98,21 +99,21 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/**
 	 * Key in the tap.properties file to define the authentication scheme.
 	 */
-	public final static String KEY_AUTH_SCHEME = "auth_scheme";
+	public final static String KEY_AUTH = "auth";
 
 	/**
 	 * Key in the tap.properties file to define the authentication realm.
 	 */
 	public final static String KEY_AUTH_REALM = "auth_realm";
 	/**
-	 * Auth scheme to send back with www-authenticate on a 401 response. Defaults to Basic but can
-	 * be set in tap.properties using the key defined by AUTH_TYPE_KEY
-	 *
-	 * NOTE: If using a scheme that requires more than a realm property then you may need to inherit this
-	 * UserIdentifier, overriding the behaviour for sending back a 401 www-authenticate header.
+	 * List of authentication schemes to send back with their individual www-authenticate headers.
+	 * using KEY_AUTH.schemes
 	 */
-	protected String authScheme;
-	protected String authRealm;
+	protected List<String> authSchemes;
+	/**
+	 * List of properties for each authentication scheme. In the format: {scheme : {property_name : property value}}
+	 */
+	protected Map<String, Map<String, String>> authProperties;
 
 
 	/* URL to send authentication requests to verify token. Changed in tap.properties under
@@ -161,19 +162,41 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	 *
 	 */
 	public ConfigurableAuthUserIdentifier(final Properties tapConfig) throws UWSException{
+		// Extract and check required properties
 		this.authHeaderField = tapConfig.getProperty(KEY_AUTH_HEADER_FIELD);
 		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
 		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
 		this.responseAllowedDataField = tapConfig.getProperty(KEY_RESP_ALLOWED_ACCESS_FIELD);
-		this.authScheme = tapConfig.getProperty(KEY_AUTH_SCHEME);
-		this.authRealm = tapConfig.getProperty(KEY_AUTH_REALM);
+		String authSchemesString = tapConfig.getProperty(KEY_AUTH+".schemes"); // First get the string, just to do a null check
 		// if any of the required fields are missing, throw IllegalArgumentException
 		if (this.authHeaderField == null || this.authURL == null || this.responseUserIDField == null ||
-			this.responsedPseudoField == null || this.responseAllowedDataField == null){
+			this.responsedPseudoField == null || this.responseAllowedDataField == null || authSchemesString == null){
 			throw new UWSException("Missing parameters "+
 				String.join(", ", KEY_AUTH_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
 				" to setup auth in tap.properties");
+		}
+
+		// Extract the WWW-Authenticate headers
+		this.authSchemes = Arrays.asList(authSchemesString.split(","));
+		this.authProperties = new HashMap<String, Map<String, String>>();
+		for (String scheme : this.authSchemes){
+			this.authProperties.put(scheme, new HashMap<String, String>());
+		}
+		for (String authPropName : tapConfig.stringPropertyNames()){
+			if (authPropName.startsWith(KEY_AUTH+".") && !authPropName.equals(KEY_AUTH+".schemes")){
+				String[] propertyComponents = authPropName.split(".");
+				// Properties set for a specific authentication schem
+				if (propertyComponents.length == 3 && authSchemes.contains(propertyComponents[1])){
+					String scheme = propertyComponents[1];
+					this.authProperties.get(scheme).put(propertyComponents[2], tapConfig.getProperty(authPropName));
+				} else if (propertyComponents.length == 2) { // Property for all authentication schemes
+					for (String scheme : this.authSchemes){
+						this.authProperties.get(scheme).put(propertyComponents[1], tapConfig.getProperty(authPropName));
+					}
+				}
+				// Otherwise nothing is done for this property as it's invalid.
+			}
 		}
 
 		String propValue = tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS);
@@ -256,17 +279,21 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	}
 
 	/**
-	 * WWW-Authenticate header to insert into the response if the TAP header in the case anonymous access
-	 * if performed while this is being used as the UserIdentifier. public to be accessible by the TAP service
+	 * WWW-Authenticate headers to insert into the response in the response in the case anonymous access
+	 * if performed while this is being used as the UserIdentifier.
 	 *
 	 * @return				The www-authenticate details to send back
 	 **/
-	public String getWWWAuthenticate(){
-		String wwwAuthenticateHeader = this.authScheme;
-		if (this.authRealm != null){
-			wwwAuthenticateHeader+=" realm=\""+this.authRealm+"\"";
+	public List<String> getWWWAuthenticates(){
+		List<String> headerStrings = new ArrayList<String>();
+		for (String scheme : authSchemes) {
+			String headerValue = scheme; // Starts with the scheme
+			for (Map.Entry<String, String> entry : authProperties.get(scheme).entrySet()){
+				headerValue += String.format(" %s=%s", entry.getKey(), entry.getValue());
+			}
+			headerStrings.add(headerValue);
 		}
-		return wwwAuthenticateHeader;
+		return headerStrings;
 	}
 
 	/**

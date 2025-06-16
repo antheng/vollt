@@ -1003,10 +1003,11 @@ public class TAP implements VOSIResource {
 			// Check if the auth header is there to verify. If not add the WWW-Authenticate header
 			if (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier){
 				ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
-				if (request.getHeader(authUserIdentifier.getAuthHeaderField()) == null) {
-					// Pre-emptively add the WWW-Authenticate header as the auth header is not there.
-					// Will be used even if the user details succeed if this service allows anonymous
-					response.setHeader("WWW-Authenticate", authUserIdentifier.getWWWAuthenticate());
+				// Pre-emptively add the WWW-Authenticate header as the auth header is not there.
+				// Will be used even if the user details succeed if this service allows anonymous
+				for (String wwwAuthHeader : authUserIdentifier.getWWWAuthenticates()){
+					// Add a new WWW-Authenticate value.
+					response.addHeader("WWW-Authenticate", wwwAuthHeader);
 				}
 			}
 			// Identify the user:
