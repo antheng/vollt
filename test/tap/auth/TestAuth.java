@@ -86,6 +86,7 @@ public class TestAuth {
 		validProp.setProperty("response_pseudo_field", "username");
 		validProp.setProperty("response_allowed_access_field", "allowed_access");
 		validProp.setProperty("auth.schemes", "Basic, Bearer");
+		validProp.setProperty("auth.Basic.realm", "vollt auth");
 		return validProp;
 	}
 
