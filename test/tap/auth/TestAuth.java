@@ -23,7 +23,8 @@ import tap.TAPFactory;
 import uws.service.file.UWSFileManager;
 import uws.service.UserIdentifier;
 import uws.job.user.JobOwner;
-import javax.servlet.http.HttpServletRequest;
+import uws.UWSException;
+import javax.servlet.http.HttpServletRequest;	
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -58,6 +59,7 @@ import java.util.Collection;
 import org.json.JSONObject;
 import org.json.JSONException;
 
+
 // Current method to mock httpservletrequest without having to include a whole implementation. Also helps for ServiceConnection
 import org.mockito.Mockito;
 
@@ -85,8 +87,8 @@ public class TestAuth {
 		validProp.setProperty("response_id_field", "userid");
 		validProp.setProperty("response_pseudo_field", "username");
 		validProp.setProperty("response_allowed_access_field", "allowed_access");
+		
 		validProp.setProperty("auth.schemes", "Basic, Bearer");
-		validProp.setProperty("auth.Basic.realm", "vollt auth");
 		return validProp;
 	}
 
@@ -103,6 +105,11 @@ public class TestAuth {
         // Start the server
         server.setExecutor(null); // Use the default executor
         server.start();
+
+
+		// Create auth contexts
+		server.createContext("/auth", new AuthHttpHandler());
+		server.createContext("/badauth", new AuthErroringHandler());
 
         // Load up test schemas
         schema1.addTable("t1");
@@ -129,6 +136,50 @@ public class TestAuth {
 	public static void tearDownAfterClass() throws Exception {
 		server.stop(5);
 	}
+
+	/**
+	 * Basic test first to ensure the user identifier and the AuthJobOwner classes work correctly without a remote connection,
+	 * and all checks work.
+	 */
+	@Test
+	public void testUserIdentifierWWWAuthenticates() throws Exception {
+		Properties testProps = getConfigurableAuthTestProperties("/auth");
+
+
+		testProps.setProperty("auth.schemes", "Basic, Bearer");
+		testProps.setProperty("auth.realm", "\"vollt_auth\"");
+		testProps.setProperty("auth.Bearer.testprop", "confirmed");
+
+		ConfigurableAuthUserIdentifier authUserIdentifier = new ConfigurableAuthUserIdentifier(testProps);
+		List<String> allWWWAuths = authUserIdentifier.getWWWAuthenticates();
+		assertEquals(allWWWAuths.size(), 2);
+
+		for (String headerStr : allWWWAuths){
+		    // TODO: Actually check the header value
+		    String [] parts = headerStr.split(" ");
+		    String challenge = parts[0];
+		    assertTrue("Challenge recieved: "+challenge,challenge.equals("Basic") || challenge.equals("Bearer"));
+			HashMap<String, String> challengeProps = new HashMap<>();
+			for (int i = 1; i<parts.length; i++){
+				String[] keyValue = parts[i].split("=");
+				System.out.println(parts[i]);
+				assertEquals(keyValue.length, 2);
+				challengeProps.put(keyValue[0], keyValue[1]);
+			}
+
+			if (challenge.equals("Basic")){
+				assertTrue(challengeProps.containsKey("realm"));
+				assertEquals(challengeProps.get("realm"), "\"vollt_auth\"");
+				assertFalse(challengeProps.containsKey("testprop"));
+			} else if (challenge.equals("Bearer")){
+				assertTrue(challengeProps.containsKey("realm"));
+				assertEquals(challengeProps.get("realm"), "\"vollt_auth\"");
+				assertTrue(challengeProps.containsKey("testprop"));
+				assertEquals(challengeProps.get("testprop"), "confirmed");
+			}
+		}
+	}
+
 	/**
 	 * Basic test first to ensure the user identifier and the AuthJobOwner classes work correctly without a remote connection,
 	 * and all checks work.
@@ -137,12 +188,14 @@ public class TestAuth {
 	public void testUserIdentifierAuthJobOwner() throws Exception {
 
 		ConfigurableAuthUserIdentifier authUserIdentifier = new ConfigurableAuthUserIdentifier(getConfigurableAuthTestProperties("/auth"));
+		
 		HashMap<String, Object> userInfo = new HashMap<>();
 		// Setup schemas and tables
 		List<TAPSchema> schemasAllowed = Arrays.asList(schema1, schema2);
 		userInfo.put("allowedData", schemasAllowed);
 
 		AuthJobOwner jobOwner = (AuthJobOwner) authUserIdentifier.restoreUser("001", "tapuser001", userInfo);
+
 		// Now time to run some checks
 		// Test schema access
 		assertTrue(jobOwner.canAccessSchema(schema1));
@@ -195,9 +248,6 @@ public class TestAuth {
  	 * Ensure all user information including allowed table access permissions is correct.
 	 */
 	public void testUserIdentifierAPI() throws Exception {
-		// Create auth contexts
-        final String endpoint = "/auth";
-        server.createContext(endpoint, new AuthHttpHandler());
         Properties authProps = getConfigurableAuthTestProperties("/auth");
 
 		ConfigurableAuthUserIdentifier useridentifier = new ConfigurableAuthUserIdentifier(authProps);
@@ -236,6 +286,74 @@ public class TestAuth {
 		assertTrue(jobOwner.canAccessTable(schema3.getTable("t1")));
 	}
 
+	/**
+	 * Basic test first to ensure the user identifier and the AuthJobOwner classes work correctly without a remote connection,
+	 * and all checks work.
+	 */
+	@Test
+	public void testAllowedAnonymous() throws Exception {
+		Properties authProps = getConfigurableAuthTestProperties("/auth");
+		authProps.setProperty("anonymous_user_support", "true");
+		ConfigurableAuthUserIdentifier userIdentifier = new ConfigurableAuthUserIdentifier(authProps);
+
+		HttpServletRequest mockRequest = Mockito.mock(HttpServletRequest.class);
+		Mockito.when(mockRequest.getHeader(authProps.getProperty("auth_header_field"))).
+			thenReturn(null);
+
+		// Should return null without issue
+		AuthJobOwner anonJobOwner = userIdentifier.extractUserId(null, mockRequest);
+
+		assertEquals("id0", anonJobOwner.getID());
+		assertEquals("Anonymous", anonJobOwner.getPseudo());
+		// Check schemas
+		assertTrue(anonJobOwner.canAccessSchema(schema2));
+		// Check tables
+		assertTrue(anonJobOwner.canAccessTable(schema2.getTable("table1")));
+	}
+	/**
+	 * Ensure a UWSException is raised when attempting to create a user without the auth header
+	 */
+	@Test(expected = UWSException.class)
+	public void testNotAllowedAnonymous() throws Exception {
+		Properties authProps = getConfigurableAuthTestProperties("/auth");
+		HttpServletRequest mockRequest = Mockito.mock(HttpServletRequest.class);
+		Mockito.when(mockRequest.getHeader(authProps.getProperty("auth_header_field"))).
+			thenReturn(null);
+		authProps.setProperty("anonymous_user_support", "false"); // Now test when its false
+		ConfigurableAuthUserIdentifier userIdentifier = new ConfigurableAuthUserIdentifier(authProps);
+		try{
+			// Should throw a UWSException fulfilling the condition
+			userIdentifier.extractUserId(null, mockRequest); 
+		} catch(UWSException ue) {
+			// Assertion exceptions will fail the test
+			assertEquals(ue.getHttpErrorCode(), 401); // Check the Unauthorized code was thrown
+			throw ue; // Rethrow to fulfil expected exception requirements
+		}
+
+	}
+
+	/**
+	 * Ensure a UWSException is raised when attempting to create a user without the auth header
+	 */
+	@Test(expected = UWSException.class)
+	public void testPropagatedError() throws Exception {
+		Properties authProps = getConfigurableAuthTestProperties("/badauth");
+		HttpServletRequest mockRequest = Mockito.mock(HttpServletRequest.class);
+		Mockito.when(mockRequest.getHeader(authProps.getProperty("auth_header_field"))).
+			thenReturn("Bearer notGoingtoWorkAnyway");
+		authProps.setProperty("anonymous_user_support", "true");
+		ConfigurableAuthUserIdentifier userIdentifier = new ConfigurableAuthUserIdentifier(authProps);
+		try{
+			// Should throw a UWSException fulfilling the condition
+			userIdentifier.extractUserId(null, mockRequest);
+		} catch(UWSException ue) {
+			// Assertion exceptions will fail the test
+			assertEquals(ue.getHttpErrorCode(), 403); // Check the error code given by the http hander is propagated back up here
+			throw ue; // Rethrow to fulfil expected exception requirements
+		}
+
+	}
+
 	public static final String getPertinentMessage(final Exception ex){
 		return (ex.getCause() == null || ex.getMessage().equals(ex.getCause().getMessage())) ? ex.getMessage() : ex.getCause().getMessage();
 	}
@@ -252,9 +370,8 @@ public class TestAuth {
 		return new TAPParameters(dummyServiceConn, tapParams);
 	}
 
-	public class AuthHttpHandler implements HttpHandler {
+	public static class AuthHttpHandler implements HttpHandler {
 			HashMap<String, UserDetailsContainer> sessContainer = new HashMap<>();
-
         	public AuthHttpHandler(){
         		sessContainer.put("IZ1J08K5Vwzu9J3StE33R6zELhswmyZkE2MMb0pLtec3dwl0IjPPdx189Z1IV7DK",
         			new UserDetailsContainer("id1", "User1", Arrays.asList(schema1, schema2_fuller))
@@ -296,30 +413,66 @@ public class TestAuth {
 
 			@Override
 			public void handle(HttpExchange exchange) throws IOException {
-				// body recieved as string, convert to JSONObject and build response string
-				Headers headers = exchange.getRequestHeaders();
-				String authStr = headers.getFirst("Authorization");
-				String token = authStr.replace("Bearer ", "");
-		   		exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
-
-				UserDetailsContainer userDetails = sessContainer.get(token);
-				JSONObject responseJson = new JSONObject();
-				responseJson.put("userid", userDetails.getUserId());
-				responseJson.put("username", userDetails.getUsername());
-				responseJson.put("allowed_access", userDetails.allowedDataAsMap());
-				String response = responseJson.toString();
-
-			    exchange.sendResponseHeaders(200, response.length());
-			   	OutputStream os = exchange.getResponseBody();
-			    DataOutputStream outStream = new DataOutputStream(os);
 				try{
-					outStream.writeBytes(response);
-					outStream.flush();
+					// body recieved as string, convert to JSONObject and build response string
+					Headers headers = exchange.getRequestHeaders();
+					String authStr = headers.getFirst("Authorization");
+					exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
+					// Set as anonymous user until a token is extracted
+					UserDetailsContainer userDetails = new UserDetailsContainer("id0", "Anonymous", Arrays.asList(schema2));
+					boolean isAnonymous;
+					if (authStr != null){
+						if (authStr.startsWith("Bearer ")){
+							String token = authStr.replace("Bearer ", "");
+							userDetails = sessContainer.get(token);
+						}
+					}
+					JSONObject responseJson = new JSONObject();
+					responseJson.put("userid", userDetails.getUserId());
+					responseJson.put("username", userDetails.getUsername());
+					responseJson.put("allowed_access", userDetails.allowedDataAsMap());
+					String response = responseJson.toString();
+
+				    exchange.sendResponseHeaders(200, response.length());
+				   	OutputStream os = exchange.getResponseBody();
+				    DataOutputStream outStream = new DataOutputStream(os);
+					try{
+						outStream.writeBytes(response);
+						outStream.flush();
+					} catch (Exception e){
+						System.err.println("Failed to send response "+response+" : "+e.toString());
+					}finally {
+						outStream.close();
+					}
 				} catch (Exception e){
-					System.err.println("Failed to send response "+response+" : "+e.toString());
-				}finally {
-					outStream.close();
+					System.out.println("Server error: "+e.toString());
 				}
 			}
 		}
+
+		public static class AuthErroringHandler implements HttpHandler {
+
+			@Override
+			public void handle(HttpExchange exchange) throws IOException {
+				try{
+					// body recieved as string, convert to JSONObject and build response string
+					String response = "Bad Access!";
+				    exchange.sendResponseHeaders(403, response.length());
+				   	OutputStream os = exchange.getResponseBody();
+				    DataOutputStream outStream = new DataOutputStream(os);
+					try{
+						outStream.writeBytes(response);
+						outStream.flush();
+					} catch (Exception e){
+						System.err.println("Failed to send response "+response+" : "+e.toString());
+					}finally {
+						outStream.close();
+					}
+				} catch (Exception e){
+					System.out.println("Server error: "+e.toString());
+				}
+			}
+		}
+
+
 }

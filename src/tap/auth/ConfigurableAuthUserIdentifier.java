@@ -255,7 +255,9 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
         } catch (ServletException e){
 			throw new UWSException(401, e); // The servletexception above got thrown, send a 401 Unauthorized
-		} catch (Exception e) {
+		} catch (TAPException te){
+			throw new UWSException(te.getHttpErrorCode(), te);
+		}catch (Exception e) {
 			throw new UWSException(e);
 		}
 
