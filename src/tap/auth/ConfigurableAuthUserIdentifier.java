@@ -20,7 +20,9 @@ package tap.auth;
 import java.util.Properties;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
@@ -169,27 +171,35 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
 		this.responseAllowedDataField = tapConfig.getProperty(KEY_RESP_ALLOWED_ACCESS_FIELD);
 		String authSchemesString = tapConfig.getProperty(KEY_AUTH+".schemes"); // First get the string, just to do a null check
+
 		// if any of the required fields are missing, throw IllegalArgumentException
 		if (this.authHeaderField == null || this.authURL == null || this.responseUserIDField == null ||
 			this.responsedPseudoField == null || this.responseAllowedDataField == null || authSchemesString == null){
 			throw new UWSException("Missing parameters "+
-				String.join(", ", KEY_AUTH_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD)+
+				String.join(", ", KEY_AUTH_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD, KEY_AUTH+".schemes")+
 				" to setup auth in tap.properties");
 		}
 
 		// Extract the WWW-Authenticate headers
-		this.authSchemes = Arrays.asList(authSchemesString.split(","));
+		this.authSchemes = Arrays.stream(authSchemesString.split(Pattern.quote(",")))
+                         .map(String::trim)
+                         .collect(Collectors.toList());
 		this.authProperties = new HashMap<String, Map<String, String>>();
 		for (String scheme : this.authSchemes){
 			this.authProperties.put(scheme, new HashMap<String, String>());
 		}
 		for (String authPropName : tapConfig.stringPropertyNames()){
+
 			if (authPropName.startsWith(KEY_AUTH+".") && !authPropName.equals(KEY_AUTH+".schemes")){
-				String[] propertyComponents = authPropName.split(".");
-				// Properties set for a specific authentication schem
-				if (propertyComponents.length == 3 && authSchemes.contains(propertyComponents[1])){
+				// Java .split relies on escaping "." since thats reserved for an any character in regex
+				String[] propertyComponents = authPropName.split(Pattern.quote("."));
+				// Properties set for a specific authentication scheme
+
+				if (propertyComponents.length == 3){
 					String scheme = propertyComponents[1];
-					this.authProperties.get(scheme).put(propertyComponents[2], tapConfig.getProperty(authPropName));
+					if (this.authSchemes.contains(scheme)){
+						this.authProperties.get(scheme).put(propertyComponents[2], tapConfig.getProperty(authPropName));
+					}
 				} else if (propertyComponents.length == 2) { // Property for all authentication schemes
 					for (String scheme : this.authSchemes){
 						this.authProperties.get(scheme).put(propertyComponents[1], tapConfig.getProperty(authPropName));
@@ -198,7 +208,6 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 				// Otherwise nothing is done for this property as it's invalid.
 			}
 		}
-
 		String propValue = tapConfig.getProperty(KEY_RESP_ALLOW_ANONYMOUS);
 		this.allowAnonymous = (propValue == null) ? false : Boolean.parseBoolean(propValue); // Default: do not support anonymous
 		propValue = tapConfig.getProperty(KEY_API_TIMEOUT);
@@ -261,7 +270,6 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	TAPSchema schemaToAdd = new TAPSchema(schemaName);
         	JSONArray tableNamesArr = accessjson.getJSONArray(schemaName);
         	for (int i = 0; i<tableNamesArr.length(); i++){
-        		// System.out.println("adding to allowed table: " + tableNamesArr.getString(i));
 	            schemaToAdd.addTable(schemaName+"."+tableNamesArr.getString(i));
 	        }
 	        allowedDataFromAPI.add(schemaToAdd);
@@ -279,31 +287,21 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	}
 
 	/**
-	 * WWW-Authenticate headers to insert into the response in the response in the case anonymous access
+	 * Get WWW-Authenticate headers to insert into the response in the response in the case anonymous access
 	 * if performed while this is being used as the UserIdentifier.
 	 *
 	 * @return				The www-authenticate details to send back
 	 **/
 	public List<String> getWWWAuthenticates(){
 		List<String> headerStrings = new ArrayList<String>();
-		for (String scheme : authSchemes) {
+		for (String scheme : this.authSchemes) {
 			String headerValue = scheme; // Starts with the scheme
-			for (Map.Entry<String, String> entry : authProperties.get(scheme).entrySet()){
+			for (Map.Entry<String, String> entry : this.authProperties.get(scheme).entrySet()){
 				headerValue += String.format(" %s=%s", entry.getKey(), entry.getValue());
 			}
 			headerStrings.add(headerValue);
 		}
 		return headerStrings;
-	}
-
-	/**
-	 * Get the header field name for extracting the session. Used if we want to check it's value
-	 * in a request or the abscence of such.
-	 *
-	 * @return The authentication header field name used to extract the session token
-	 **/
-	public String getAuthHeaderField(){
-		return this.authHeaderField;
 	}
 }
 

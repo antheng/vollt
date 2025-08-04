@@ -997,10 +997,18 @@ public class TAP implements VOSIResource {
 			// log the successful initialization:
 			getLogger().logUWS(LogLevel.INFO, this, "INIT", "TAP successfully initialized (" + tapBaseURL + ").", null);
 		}
-
 		JobOwner user = null;
 		try{
 			// Check if the auth header is there to verify. If not add the WWW-Authenticate header
+			/* TODO: This attaches WWW-Authenticate to EVERY requests. Currently we are relying on the authentication API to
+			*        provide a specific anonymous user with the tables/schemas anonymous users are allowed to access.
+			*        This currently does not let us know when a user is truly anonymous and therefore no current way to tell
+			*        when a WWW-Authenticate header should be sent if anonymous users are allowed.
+			*        I have thought of just checking if the header is null, however this would disclude cases where a header
+			*        value is given, but has expired or is invalid.
+			*
+			*        Anyway looking for a better way to handle this.
+			*/
 			if (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier){
 				ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
 				// Pre-emptively add the WWW-Authenticate header as the auth header is not there.

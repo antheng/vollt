@@ -1060,10 +1060,11 @@ public final class ConfigurableServiceConnection implements ServiceConnection {
 			    userIdentifier = newInstance(propValue, KEY_USER_IDENTIFIER, UserIdentifier.class,
 			        new Class<?>[]{Properties.class}, new Object[]{tapConfig});
 			} catch (TAPException e) {
+				// TODO: If the above errors for any reason the underlying issue gets suppressed and gives the
+				// user the wrong error. This is an issue with TAPException
 				// Allow previous constructor requirements
 			    userIdentifier = newInstance(propValue, KEY_USER_IDENTIFIER, UserIdentifier.class);
 			}
-			
 		}
 	}
 
