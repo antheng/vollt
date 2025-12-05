@@ -86,6 +86,8 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* Property name used to set the name of the key in the authentication URL response, which
 	stores the user's ID*/
 	public final static String KEY_RESP_SESSIONID_FIELD = "response_id_field";
+	/* Data type used to store the user id. Either 'integer' or 'string'*/
+	public final static String KEY_RESP_SESSIONID_DATATYPE = "response_id_datatype";
 	/* Property name used to set the name of the key in the authentication URL response, which
 	stores the username*/
 	public final static String KEY_RESP_PSEUDO_FIELD = "response_pseudo_field";
@@ -94,7 +96,6 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	public final static String KEY_RESP_ALLOWED_ACCESS_FIELD = "response_allowed_access_field";
 	/* Allow anonymous user generation. Still needs to be handled on the backend */
 	public final static String KEY_RESP_ALLOW_ANONYMOUS = "anonymous_user_support";
-
 	/* Property name used to set timeout limit in millseconds when communicating with the auth url*/
 	public final static String KEY_API_TIMEOUT = "auth_timeout";
 
@@ -132,7 +133,11 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 
 	/* From the API response the field name of the User ID. Can be changed in tap.properties under
 	response_id_field */
-	private String responseUserIDField;
+	private String responseUserIdField;
+
+	/* From the API response the datatype name of the User ID. Can be changed in tap.properties under
+	response_id_field */
+	private String responseUserIdDataType;
 
 	/* From the API response the field name of the username. Can be changed in tap.properties under
 	response_pseudo_field */
@@ -167,13 +172,14 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		// Extract and check required properties
 		this.authHeaderField = tapConfig.getProperty(KEY_AUTH_HEADER_FIELD);
 		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
-		this.responseUserIDField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
+		this.responseUserIdField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
+		this.responseUserIdDataType = tapConfig.getProperty(KEY_RESP_SESSIONID_DATATYPE);
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
 		this.responseAllowedDataField = tapConfig.getProperty(KEY_RESP_ALLOWED_ACCESS_FIELD);
 		String authSchemesString = tapConfig.getProperty(KEY_AUTH+".schemes"); // First get the string, just to do a null check
 
 		// if any of the required fields are missing, throw IllegalArgumentException
-		if (this.authHeaderField == null || this.authURL == null || this.responseUserIDField == null ||
+		if (this.authHeaderField == null || this.authURL == null || this.responseUserIdField == null ||
 			this.responsedPseudoField == null || this.responseAllowedDataField == null || authSchemesString == null){
 			throw new UWSException("Missing parameters "+
 				String.join(", ", KEY_AUTH_HEADER_FIELD, KEY_AUTH_URL_FIELD, KEY_RESP_SESSIONID_FIELD, KEY_RESP_PSEUDO_FIELD,KEY_RESP_ALLOWED_ACCESS_FIELD, KEY_AUTH+".schemes")+
@@ -253,6 +259,7 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
         	HashMap<String, String> authHeaders = new HashMap<String, String>();
         	authHeaders.put(this.authHeaderField, sessionToken);
         	jsonResponse = (JSONObject) this.api.sendRequest(authHeaders);
+
         } catch (ServletException e){
 			throw new UWSException(401, e); // The servletexception above got thrown, send a 401 Unauthorized
 		} catch (TAPException te){
@@ -277,10 +284,11 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	        allowedDataFromAPI.add(schemaToAdd);
         }
         permissions.put("allowedData", allowedDataFromAPI);
-
+        String userIdString = this.responseUserIdDataType.equals("integer") ?
+        						String.valueOf(jsonResponse.getInt(this.responseUserIdField)) : // If integer
+        						jsonResponse.getString(this.responseUserIdField); // Else attempt to extract string
         // Loop over json array of tables. Extract Object and convert to string to build a new TAPSchema
-        return restoreUser(jsonResponse.getString(this.responseUserIDField),
-        	jsonResponse.getString(this.responsedPseudoField), permissions);
+        return restoreUser(userIdString, jsonResponse.getString(this.responsedPseudoField), permissions);
 	}
 
 	@Override
