@@ -85,12 +85,13 @@ public class TestAuth {
 		validProp.setProperty("auth_header_field", "Authorization");
 		validProp.setProperty("session_authentication_url", "http://"+LOCAL_TEST_AUTH_SERVER_IP+":"+Integer.toString(8090)+endpoint);
 		validProp.setProperty("response_id_field", "userid");
+		validProp.setProperty("response_id_datatype", "string");
 		validProp.setProperty("response_pseudo_field", "username");
 		validProp.setProperty("response_allowed_access_field", "allowed_access");
-		
 		validProp.setProperty("auth.schemes", "Basic, Bearer");
 		return validProp;
 	}
+
 
 	@BeforeClass
 	public static void setUp() throws Exception {
