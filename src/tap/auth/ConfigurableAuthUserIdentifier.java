@@ -86,8 +86,6 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	/* Property name used to set the name of the key in the authentication URL response, which
 	stores the user's ID*/
 	public final static String KEY_RESP_SESSIONID_FIELD = "response_id_field";
-	/* Data type used to store the user id. Either 'integer' or 'string'*/
-	public final static String KEY_RESP_SESSIONID_DATATYPE = "response_id_datatype";
 	/* Property name used to set the name of the key in the authentication URL response, which
 	stores the username*/
 	public final static String KEY_RESP_PSEUDO_FIELD = "response_pseudo_field";
@@ -287,9 +285,10 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	        allowedDataFromAPI.add(schemaToAdd);
         }
         permissions.put("allowedData", allowedDataFromAPI);
-        String userIdString = this.responseUserIdDataType.equals("integer") ?
-        						String.valueOf(jsonResponse.getInt(this.responseUserIdField)) : // If integer
-        						jsonResponse.getString(this.responseUserIdField); // Else attempt to extract string
+
+        // get object storing the id, then convert the arbitrary type to string
+        String userIdString = jsonResponse.get(this.responseUserIdField).toString();
+
         // Loop over json array of tables. Extract Object and convert to string to build a new TAPSchema
         return restoreUser(userIdString, jsonResponse.getString(this.responsedPseudoField), permissions);
 	}
