@@ -133,10 +133,6 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 	response_id_field */
 	private String responseUserIdField;
 
-	/* From the API response the datatype name of the User ID. Can be changed in tap.properties under
-	response_id_field */
-	private String responseUserIdDataType;
-
 	/* From the API response the field name of the username. Can be changed in tap.properties under
 	response_pseudo_field */
 	private String responsedPseudoField;
@@ -171,10 +167,6 @@ public class ConfigurableAuthUserIdentifier implements UserIdentifier {
 		this.authHeaderField = tapConfig.getProperty(KEY_AUTH_HEADER_FIELD);
 		this.authURL = tapConfig.getProperty(KEY_AUTH_URL_FIELD);
 		this.responseUserIdField = tapConfig.getProperty(KEY_RESP_SESSIONID_FIELD);
-		this.responseUserIdDataType = tapConfig.getProperty(KEY_RESP_SESSIONID_DATATYPE);
-		if (responseUserIdDataType == null){
-			this.responseUserIdDataType = "string";
-		}
 		this.responsedPseudoField = tapConfig.getProperty(KEY_RESP_PSEUDO_FIELD);
 		this.responseAllowedDataField = tapConfig.getProperty(KEY_RESP_ALLOWED_ACCESS_FIELD);
 		String authSchemesString = tapConfig.getProperty(KEY_AUTH+".schemes"); // First get the string, just to do a null check
