@@ -999,41 +999,38 @@ public class TAP implements VOSIResource {
 		}
 		JobOwner user = null;
 		try{
-			// Skip user identification if attempting to fetch capabilities
-			if (!resourceName.equalsIgnoreCase(RESOURCE_CAPABILITIES)) {
-				// Check if the auth header is there to verify. If not add the WWW-Authenticate header
-				/* TODO: This attaches WWW-Authenticate to EVERY requests. Currently we are relying on the authentication API to
-				 *        provide a specific anonymous user with the tables/schemas anonymous users are allowed to access.
-				 *        This currently does not let us know when a user is truly anonymous and therefore no current way to tell
-				 *        when a WWW-Authenticate header should be sent if anonymous users are allowed.
-				 *        I have thought of just checking if the header is null, however this would disclude cases where a header
-				 *        value is given, but has expired or is invalid.
-				 *
-				 *        Anyway looking for a better way to handle this.
-				 */
-				if (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier) {
-					ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
-					// Pre-emptively add the WWW-Authenticate header as the auth header is not there.
-					// Will be used even if the user details succeed if this service allows anonymous
-					for (String wwwAuthHeader : authUserIdentifier.getWWWAuthenticates()) {
-						// Add a new WWW-Authenticate value.
-						response.addHeader("WWW-Authenticate", wwwAuthHeader);
-					}
+			// Check if the auth header is there to verify. If not add the WWW-Authenticate header
+			/* TODO: This attaches WWW-Authenticate to EVERY requests. Currently we are relying on the authentication API to
+			*        provide a specific anonymous user with the tables/schemas anonymous users are allowed to access.
+			*        This currently does not let us know when a user is truly anonymous and therefore no current way to tell
+			*        when a WWW-Authenticate header should be sent if anonymous users are allowed.
+			*        I have thought of just checking if the header is null, however this would disclude cases where a header
+			*        value is given, but has expired or is invalid.
+			*
+			*        Anyway looking for a better way to handle this.
+			*/
+			if (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier){
+				ConfigurableAuthUserIdentifier authUserIdentifier = (ConfigurableAuthUserIdentifier) service.getUserIdentifier();
+				// Pre-emptively add the WWW-Authenticate header as the auth header is not there.
+				// Will be used even if the user details succeed if this service allows anonymous
+				for (String wwwAuthHeader : authUserIdentifier.getWWWAuthenticates()){
+					// Add a new WWW-Authenticate value.
+					response.addHeader("WWW-Authenticate", wwwAuthHeader);
 				}
-				// Identify the user:
-				try {
-					user = UWSToolBox.getUser(request, service.getUserIdentifier());
-					// If user is anonymous, hasn't thrown a 401, then allow_anonymous is true.
-					// Allow access anonymously with the anonymous user response provided by the API
-				} catch (UWSException ue) {
-					if (ue.getHttpErrorCode() == 401 && (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier)) {
-						response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-						getLogger().logTAP(LogLevel.INFO, null, "IDENT_USER", "Auth header not present when required, sending 401", ue);
-						return; // Finish here
-					} else {
-						getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Error trying to identify the HTTP request user!", ue);
-						throw new TAPException(ue);
-					}
+			}
+			// Identify the user:
+			try{
+				user = UWSToolBox.getUser(request, service.getUserIdentifier());
+				 // If user is anonymous, hasn't thrown a 401, then allow_anonymous is true.
+				 // Allow access anonymously with the anonymous user response provided by the API
+			} catch(UWSException ue){
+				if (ue.getHttpErrorCode() == 401 && (service.getUserIdentifier() instanceof ConfigurableAuthUserIdentifier)){
+					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+					getLogger().logTAP(LogLevel.INFO, null, "IDENT_USER", "Auth header not present when required, sending 401", ue);
+					return; // Finish here
+				} else{
+					getLogger().logTAP(LogLevel.ERROR, null, "IDENT_USER", "Error trying to identify the HTTP request user!", ue);
+					throw new TAPException(ue);
 				}
 			}
 
